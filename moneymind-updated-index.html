@@ -1,0 +1,794 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>MoneyMind – Smart Budget for Kenya</title>
+<meta name="description" content="AI-powered personal budget tracker with M-Pesa & Airtel Money SMS sync for Kenya." />
+<meta name="theme-color" content="#0D1B2A" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&amp;family=Space+Mono:wght@400;700&amp;display=swap" rel="stylesheet" />
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --bg:#0D1B2A; --surface:#132033; --card:#1A2B3C; --border:#243547;
+  --accent:#00E5A0; --accent2:#F5A623; --danger:#FF5A5A;
+  --mpesa:#4CAF50; --airtel:#FF6B35; --text:#E8F0F7; --muted:#6B8BA4;
+  --income-c:#00E5A0; --expense-c:#FF5A5A;
+  --font:'Space Grotesk',sans-serif; --mono:'Space Mono',monospace; --r:12px;
+}
+html { scroll-behavior:smooth; }
+body { font-family:var(--font); background:var(--bg); color:var(--text); min-height:100vh; line-height:1.6; }
+
+/* NAV */
+nav { display:flex; align-items:center; justify-content:space-between; padding:14px 20px; background:var(--surface); border-bottom:1px solid var(--border); position:sticky; top:0; z-index:100; }
+.nav-logo { font-family:var(--mono); font-size:1.1rem; font-weight:700; color:var(--accent); }
+.nav-logo span { color:var(--text); }
+.nav-month { font-size:0.75rem; color:var(--muted); font-family:var(--mono); }
+
+/* HERO */
+.hero { padding:24px 20px 18px; background:linear-gradient(160deg,var(--surface) 0%,var(--bg) 100%); border-bottom:1px solid var(--border); }
+.hero-label { font-size:0.65rem; font-family:var(--mono); color:var(--muted); letter-spacing:2px; text-transform:uppercase; margin-bottom:4px; }
+.hero-balance { font-family:var(--mono); font-size:clamp(1.9rem,8vw,3rem); font-weight:700; color:var(--accent); letter-spacing:-1px; line-height:1; margin-bottom:4px; }
+.hero-balance.negative { color:var(--danger); }
+.hero-sub { font-size:0.76rem; color:var(--muted); margin-bottom:16px; }
+.summary-row { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+.summary-card { background:var(--card); border:1px solid var(--border); border-radius:var(--r); padding:12px; }
+.summary-card-label { font-size:0.62rem; font-family:var(--mono); text-transform:uppercase; letter-spacing:1.5px; color:var(--muted); margin-bottom:3px; }
+.summary-card-value { font-family:var(--mono); font-size:1.1rem; font-weight:700; }
+.income-val { color:var(--income-c); } .expense-val { color:var(--expense-c); }
+
+/* SYNC BANNER */
+.sync-banner { display:flex; align-items:center; justify-content:space-between; gap:10px; padding:10px 20px; background:var(--surface); border-bottom:1px solid var(--border); }
+.sync-info { display:flex; align-items:center; gap:8px; }
+.sim-badge { padding:3px 8px; border-radius:99px; font-size:0.65rem; font-family:var(--mono); font-weight:700; }
+.sim-badge.mpesa   { background:rgba(76,175,80,0.15); color:var(--mpesa); border:1px solid rgba(76,175,80,0.3); }
+.sim-badge.airtel  { background:rgba(255,107,53,0.15); color:var(--airtel); border:1px solid rgba(255,107,53,0.3); }
+.sim-badge.unknown { background:rgba(107,139,164,0.15); color:var(--muted); border:1px solid var(--border); }
+.sync-status { font-size:0.7rem; color:var(--muted); font-family:var(--mono); }
+.btn-sync { padding:7px 14px; background:var(--accent); border:none; border-radius:8px; color:var(--bg); font-family:var(--mono); font-size:0.72rem; font-weight:700; cursor:pointer; white-space:nowrap; }
+.btn-sync:disabled { opacity:0.5; cursor:not-allowed; }
+
+/* BUDGET BAR */
+.budget-bar-wrap { padding:14px 20px 0; }
+.bar-labels { display:flex; justify-content:space-between; margin-bottom:5px; }
+.bar-label { font-size:0.7rem; color:var(--muted); font-family:var(--mono); }
+.bar-track { width:100%; height:7px; background:var(--border); border-radius:99px; overflow:hidden; }
+.bar-fill { height:100%; border-radius:99px; background:var(--accent); transition:width 0.6s cubic-bezier(.4,0,.2,1); }
+.bar-fill.warning { background:var(--accent2); } .bar-fill.danger { background:var(--danger); }
+
+/* TABS */
+.tabs { display:flex; gap:4px; padding:14px 20px 0; overflow-x:auto; scrollbar-width:none; }
+.tabs::-webkit-scrollbar { display:none; }
+.tab-btn { flex-shrink:0; padding:7px 14px; border-radius:99px; border:1px solid var(--border); background:transparent; color:var(--muted); font-family:var(--font); font-size:0.78rem; font-weight:500; cursor:pointer; transition:all 0.2s; }
+.tab-btn.active { background:var(--accent); border-color:var(--accent); color:var(--bg); font-weight:700; }
+
+/* SECTIONS */
+.section { display:none; padding:14px 20px 100px; }
+.section.active { display:block; }
+
+/* FORM */
+.form-card { background:var(--card); border:1px solid var(--border); border-radius:var(--r); padding:16px; margin-bottom:16px; }
+.form-title { font-size:0.72rem; font-family:var(--mono); color:var(--muted); text-transform:uppercase; letter-spacing:1.5px; margin-bottom:12px; }
+.type-toggle { display:grid; grid-template-columns:1fr 1fr; gap:6px; margin-bottom:12px; }
+.type-btn { padding:9px; border-radius:8px; border:1px solid var(--border); background:transparent; color:var(--muted); font-family:var(--font); font-size:0.82rem; font-weight:600; cursor:pointer; transition:all 0.2s; }
+.type-btn.income.active  { background:rgba(0,229,160,0.12); border-color:var(--income-c); color:var(--income-c); }
+.type-btn.expense.active { background:rgba(255,90,90,0.12); border-color:var(--expense-c); color:var(--expense-c); }
+.form-group { margin-bottom:11px; }
+.form-label { display:block; font-size:0.68rem; color:var(--muted); font-family:var(--mono); margin-bottom:4px; text-transform:uppercase; letter-spacing:1px; }
+.form-input, .form-select { width:100%; padding:10px 13px; background:var(--bg); border:1px solid var(--border); border-radius:8px; color:var(--text); font-family:var(--font); font-size:0.88rem; outline:none; transition:border-color 0.2s; appearance:none; }
+.form-input:focus, .form-select:focus { border-color:var(--accent); }
+.form-input::placeholder { color:var(--muted); }
+.input-prefix { display:flex; align-items:center; }
+.prefix-label { padding:10px 11px; background:var(--border); border:1px solid var(--border); border-right:none; border-radius:8px 0 0 8px; color:var(--muted); font-family:var(--mono); font-size:0.82rem; }
+.input-prefix .form-input { border-radius:0 8px 8px 0; }
+.btn-primary { width:100%; padding:12px; background:var(--accent); color:var(--bg); border:none; border-radius:8px; font-family:var(--font); font-size:0.88rem; font-weight:700; cursor:pointer; transition:opacity 0.2s,transform 0.1s; }
+.btn-primary:active { transform:scale(0.98); opacity:0.9; }
+
+/* TX LIST */
+.tx-list { display:flex; flex-direction:column; gap:7px; }
+.tx-item { display:flex; align-items:center; gap:11px; background:var(--card); border:1px solid var(--border); border-radius:var(--r); padding:11px 13px; animation:slideIn 0.25s ease; }
+@keyframes slideIn { from{opacity:0;transform:translateY(-5px)} to{opacity:1;transform:translateY(0)} }
+.tx-icon { width:36px; height:36px; border-radius:9px; display:flex; align-items:center; justify-content:center; font-size:1rem; flex-shrink:0; }
+.tx-icon.income  { background:rgba(0,229,160,0.12); }
+.tx-icon.expense { background:rgba(255,90,90,0.12); }
+.tx-info { flex:1; min-width:0; }
+.tx-desc { font-size:0.85rem; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.tx-meta { font-size:0.67rem; color:var(--muted); font-family:var(--mono); }
+.tx-source { display:inline-block; padding:1px 5px; border-radius:4px; font-size:0.6rem; font-family:var(--mono); margin-left:4px; vertical-align:middle; }
+.tx-source.mpesa  { background:rgba(76,175,80,0.2); color:var(--mpesa); }
+.tx-source.airtel { background:rgba(255,107,53,0.2); color:var(--airtel); }
+.tx-source.manual { background:rgba(107,139,164,0.15); color:var(--muted); }
+.tx-amount { font-family:var(--mono); font-size:0.88rem; font-weight:700; flex-shrink:0; }
+.tx-amount.income { color:var(--income-c); } .tx-amount.expense { color:var(--expense-c); }
+.tx-delete { background:none; border:none; color:var(--muted); cursor:pointer; font-size:0.82rem; padding:3px; border-radius:4px; transition:color 0.2s; flex-shrink:0; }
+.tx-delete:hover { color:var(--danger); }
+.empty-state { text-align:center; padding:36px 20px; color:var(--muted); }
+.empty-icon { font-size:2.2rem; margin-bottom:8px; }
+.empty-text { font-size:0.83rem; }
+
+/* SMS SYNC SECTION */
+.sms-card { background:var(--card); border:1px solid var(--border); border-radius:var(--r); padding:16px; margin-bottom:14px; }
+.sms-card-title { font-size:0.72rem; font-family:var(--mono); color:var(--muted); text-transform:uppercase; letter-spacing:1.5px; margin-bottom:12px; }
+.provider-grid { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:14px; }
+.provider-card { border:2px solid var(--border); border-radius:10px; padding:12px; cursor:pointer; transition:all 0.2s; background:transparent; text-align:center; }
+.provider-card.selected.mpesa  { border-color:var(--mpesa); background:rgba(76,175,80,0.08); }
+.provider-card.selected.airtel { border-color:var(--airtel); background:rgba(255,107,53,0.08); }
+.provider-card:hover { border-color:var(--accent); }
+.provider-logo { font-size:1.6rem; margin-bottom:4px; }
+.provider-name { font-size:0.78rem; font-weight:700; }
+.provider-name.mpesa  { color:var(--mpesa); }
+.provider-name.airtel { color:var(--airtel); }
+.provider-sub { font-size:0.65rem; color:var(--muted); font-family:var(--mono); margin-top:2px; }
+
+.sms-log { background:var(--bg); border:1px solid var(--border); border-radius:8px; padding:12px; max-height:220px; overflow-y:auto; font-family:var(--mono); font-size:0.72rem; color:var(--muted); line-height:1.7; }
+.sms-log .log-ok  { color:var(--income-c); }
+.sms-log .log-exp { color:var(--expense-c); }
+.sms-log .log-skip{ color:var(--muted); }
+.sms-log .log-err { color:var(--danger); }
+
+.paste-area { width:100%; min-height:90px; padding:10px 13px; background:var(--bg); border:1px solid var(--border); border-radius:8px; color:var(--text); font-family:var(--mono); font-size:0.75rem; outline:none; resize:vertical; transition:border-color 0.2s; }
+.paste-area:focus { border-color:var(--accent); }
+.paste-area::placeholder { color:var(--muted); }
+
+.info-box { background:rgba(0,229,160,0.06); border:1px solid rgba(0,229,160,0.2); border-radius:8px; padding:12px; font-size:0.76rem; color:var(--muted); line-height:1.6; margin-bottom:12px; }
+.info-box b { color:var(--accent); }
+.step-list { list-style:none; counter-reset:steps; }
+.step-list li { counter-increment:steps; padding:5px 0 5px 28px; position:relative; font-size:0.78rem; }
+.step-list li::before { content:counter(steps); position:absolute; left:0; top:5px; width:18px; height:18px; background:var(--accent); color:var(--bg); border-radius:50%; font-family:var(--mono); font-size:0.65rem; font-weight:700; display:flex; align-items:center; justify-content:center; }
+
+/* AI */
+.ai-chat { background:var(--card); border:1px solid var(--border); border-radius:var(--r); overflow:hidden; margin-bottom:14px; }
+.ai-header { display:flex; align-items:center; gap:9px; padding:12px 15px; border-bottom:1px solid var(--border); background:var(--surface); }
+.ai-dot { width:7px; height:7px; border-radius:50%; background:var(--accent); animation:pulse 2s infinite; }
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
+.ai-title { font-size:0.78rem; font-family:var(--mono); color:var(--accent); font-weight:700; }
+.ai-messages { padding:12px; min-height:110px; max-height:300px; overflow-y:auto; display:flex; flex-direction:column; gap:9px; }
+.msg { max-width:88%; padding:9px 12px; border-radius:10px; font-size:0.82rem; line-height:1.5; animation:slideIn 0.2s ease; }
+.msg.assistant { background:var(--surface); border:1px solid var(--border); align-self:flex-start; border-radius:4px 10px 10px 10px; }
+.msg.user { background:rgba(0,229,160,0.1); border:1px solid rgba(0,229,160,0.2); align-self:flex-end; border-radius:10px 4px 10px 10px; color:var(--accent); }
+.msg.loading { color:var(--muted); font-style:italic; }
+.ai-input-row { display:flex; gap:7px; padding:10px 13px; border-top:1px solid var(--border); background:var(--surface); }
+.ai-input { flex:1; padding:9px 12px; background:var(--bg); border:1px solid var(--border); border-radius:8px; color:var(--text); font-family:var(--font); font-size:0.83rem; outline:none; }
+.ai-input:focus { border-color:var(--accent); }
+.ai-send { padding:9px 13px; background:var(--accent); border:none; border-radius:8px; color:var(--bg); font-family:var(--mono); font-weight:700; font-size:0.82rem; cursor:pointer; }
+.ai-send:disabled { opacity:0.5; cursor:not-allowed; }
+.quick-prompts { display:flex; flex-wrap:wrap; gap:5px; margin-bottom:12px; }
+.quick-btn { padding:5px 11px; background:var(--card); border:1px solid var(--border); border-radius:99px; color:var(--muted); font-size:0.72rem; font-family:var(--font); cursor:pointer; transition:all 0.2s; }
+.quick-btn:hover { border-color:var(--accent); color:var(--accent); }
+
+/* INSIGHTS */
+.chart-wrap { background:var(--card); border:1px solid var(--border); border-radius:var(--r); padding:14px; margin-bottom:12px; }
+.chart-title { font-size:0.68rem; font-family:var(--mono); color:var(--muted); text-transform:uppercase; letter-spacing:1.5px; margin-bottom:10px; }
+.category-grid { display:grid; grid-template-columns:1fr 1fr; gap:9px; margin-bottom:16px; }
+.cat-card { background:var(--card); border:1px solid var(--border); border-radius:var(--r); padding:12px; }
+.cat-icon { font-size:1.2rem; margin-bottom:4px; }
+.cat-name { font-size:0.74rem; color:var(--muted); font-family:var(--mono); margin-bottom:2px; }
+.cat-amount { font-family:var(--mono); font-size:0.95rem; font-weight:700; color:var(--expense-c); }
+.cat-bar-wrap { margin-top:7px; background:var(--border); height:4px; border-radius:99px; overflow:hidden; }
+.cat-bar { height:100%; border-radius:99px; background:var(--accent2); transition:width 0.5s; }
+
+/* SETTINGS */
+.settings-section { margin-bottom:20px; }
+.settings-title { font-size:0.68rem; font-family:var(--mono); color:var(--muted); text-transform:uppercase; letter-spacing:1.5px; margin-bottom:9px; padding-bottom:5px; border-bottom:1px solid var(--border); }
+.settings-row { display:flex; align-items:center; justify-content:space-between; padding:11px 0; border-bottom:1px solid var(--border); }
+.settings-row-label { font-size:0.83rem; }
+.settings-row-value { font-size:0.77rem; color:var(--muted); font-family:var(--mono); }
+.btn-secondary { padding:9px 15px; background:transparent; border:1px solid var(--border); border-radius:8px; color:var(--muted); font-family:var(--font); font-size:0.78rem; cursor:pointer; transition:all 0.2s; }
+.btn-secondary:hover { border-color:var(--accent); color:var(--accent); }
+.btn-danger { padding:9px 15px; background:transparent; border:1px solid var(--danger); border-radius:8px; color:var(--danger); font-family:var(--font); font-size:0.78rem; cursor:pointer; }
+
+/* TOAST */
+.toast { position:fixed; bottom:78px; left:50%; transform:translateX(-50%) translateY(18px); background:var(--surface); border:1px solid var(--border); border-radius:99px; padding:9px 18px; font-size:0.78rem; font-family:var(--mono); color:var(--text); opacity:0; transition:all 0.3s; pointer-events:none; z-index:200; white-space:nowrap; }
+.toast.show { opacity:1; transform:translateX(-50%) translateY(0); }
+.toast.success { border-color:var(--accent); color:var(--accent); }
+.toast.error   { border-color:var(--danger); color:var(--danger); }
+
+/* BOTTOM NAV */
+.bottom-nav { position:fixed; bottom:0; left:0; right:0; display:flex; background:var(--surface); border-top:1px solid var(--border); z-index:100; }
+.nav-item { flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:9px 4px; cursor:pointer; border:none; background:transparent; color:var(--muted); font-size:0.58rem; font-family:var(--mono); text-transform:uppercase; letter-spacing:0.5px; transition:color 0.2s; gap:2px; }
+.nav-item .nav-icon { font-size:1rem; }
+.nav-item.active { color:var(--accent); }
+
+/* UTILS */
+.mt8 { margin-top:8px; }
+.mt12 { margin-top:12px; }
+.section-title { font-size:0.68rem; font-family:var(--mono); color:var(--muted); text-transform:uppercase; letter-spacing:1.5px; margin-bottom:9px; display:block; }
+
+/* AUTH MODAL */
+#authModal { position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(13,27,42,0.98); display:flex; align-items:center; justify-content:center; z-index:10000; }
+</style>
+</head>
+<body>
+
+<!-- AUTH MODAL -->
+<div id="authModal">
+  <div class="form-card" style="max-width:380px;width:100%;margin:20px;">
+    <div style="text-align:center;margin-bottom:24px;">
+      <div class="nav-logo" style="font-size:2rem;">Money<span>Mind</span></div>
+      <p style="color:var(--muted);margin-top:8px;">Kenya's smartest budget tracker</p>
+    </div>
+    
+    <div id="authTabs" style="display:flex;gap:8px;margin-bottom:20px;">
+      <button onclick="switchAuthTab(0)" class="tab-btn active" style="flex:1;">Login</button>
+      <button onclick="switchAuthTab(1)" class="tab-btn" style="flex:1;">Register</button>
+    </div>
+
+    <!-- Login Form -->
+    <div id="loginForm">
+      <div class="form-group">
+        <label class="form-label">Email</label>
+        <input class="form-input" id="loginEmail" type="email" placeholder="you@email.com" />
+      </div>
+      <div class="form-group">
+        <label class="form-label">Password</label>
+        <input class="form-input" id="loginPassword" type="password" placeholder="••••••••" />
+      </div>
+      <button class="btn-primary" onclick="login()">Login</button>
+      <div style="text-align:center;margin-top:16px;font-size:0.82rem;color:var(--muted);">
+        No account? <span onclick="switchAuthTab(1)" style="color:var(--accent);cursor:pointer;">Register</span>
+      </div>
+    </div>
+
+    <!-- Register Form -->
+    <div id="registerForm" style="display:none;">
+      <div class="form-group">
+        <label class="form-label">Full Name</label>
+        <input class="form-input" id="regName" placeholder="John Doe" />
+      </div>
+      <div class="form-group">
+        <label class="form-label">Email</label>
+        <input class="form-input" id="regEmail" type="email" placeholder="you@email.com" />
+      </div>
+      <div class="form-group">
+        <label class="form-label">Password</label>
+        <input class="form-input" id="regPassword" type="password" placeholder="Create a strong password" />
+      </div>
+      <button class="btn-primary" onclick="register()">Create Account</button>
+      <div style="text-align:center;margin-top:16px;font-size:0.82rem;color:var(--muted);">
+        Have an account? <span onclick="switchAuthTab(0)" style="color:var(--accent);cursor:pointer;">Login</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- NAV -->
+<nav>
+  <div class="nav-logo">Money<span>Mind</span></div>
+  <div class="nav-month" id="currentMonth">—</div>
+  <button onclick="logout()" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:0.9rem;">Logout</button>
+</nav>
+
+<!-- SYNC BANNER -->
+<div class="sync-banner">
+  <div class="sync-info">
+    <span class="sim-badge unknown" id="simBadge">No SIM</span>
+    <span class="sync-status" id="syncStatus">Not synced</span>
+  </div>
+  <button class="btn-sync" id="btnSync" onclick="showSection('sms');setNav(document.querySelectorAll('.nav-item')[2])">Sync SMS</button>
+</div>
+
+<!-- HERO -->
+<div class="hero">
+  <div class="hero-label">Net Balance</div>
+  <div class="hero-balance" id="heroBalance">KES 0</div>
+  <div class="hero-sub" id="heroSub">Start by adding a transaction</div>
+  <div class="summary-row">
+    <div class="summary-card">
+      <div class="summary-card-label">Income</div>
+      <div class="summary-card-value income-val" id="totalIncome">KES 0</div>
+    </div>
+    <div class="summary-card">
+      <div class="summary-card-label">Expenses</div>
+      <div class="summary-card-value expense-val" id="totalExpense">KES 0</div>
+    </div>
+  </div>
+</div>
+
+<!-- BUDGET BAR -->
+<div class="budget-bar-wrap">
+  <div class="bar-labels">
+    <span class="bar-label">Budget used</span>
+    <span class="bar-label" id="barPct">0%</span>
+  </div>
+  <div class="bar-track"><div class="bar-fill" id="budgetBar" style="width:0%"></div></div>
+</div>
+
+<!-- TABS -->
+<div class="tabs">
+  <button class="tab-btn active" onclick="showSection('add')">+ Add</button>
+  <button class="tab-btn" onclick="showSection('history')">History</button>
+  <button class="tab-btn" onclick="showSection('sms')">📱 SMS Sync</button>
+  <button class="tab-btn" onclick="showSection('insights')">Insights</button>
+  <button class="tab-btn" onclick="showSection('ai')">AI Chat</button>
+  <button class="tab-btn" onclick="showSection('settings')">Settings</button>
+</div>
+
+<!-- ADD -->
+<div class="section active" id="sec-add">
+  <div class="form-card">
+    <div class="form-title">New Transaction</div>
+    <div class="type-toggle">
+      <button class="type-btn income active" id="btnIncome" onclick="setType('income')">↑ Income</button>
+      <button class="type-btn expense" id="btnExpense" onclick="setType('expense')">↓ Expense</button>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Description</label>
+      <input class="form-input" id="txDesc" placeholder="e.g. Freelance payment" />
+    </div>
+    <div class="form-group">
+      <label class="form-label">Amount (KES)</label>
+      <div class="input-prefix">
+        <span class="prefix-label">KES</span>
+        <input class="form-input" id="txAmount" type="number" placeholder="0.00" min="0" />
+      </div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Category</label>
+      <select class="form-select" id="txCategory">
+        <option value="Salary">💼 Salary</option>
+        <option value="Freelance">💻 Freelance</option>
+        <option value="Business">🏪 Business</option>
+        <option value="Investment">📈 Investment</option>
+        <option value="Gift">🎁 Gift</option>
+        <option value="Food">🍽️ Food & Dining</option>
+        <option value="Transport">🚌 Transport</option>
+        <option value="Rent">🏠 Rent</option>
+        <option value="Utilities">💡 Utilities</option>
+        <option value="Shopping">🛍️ Shopping</option>
+        <option value="Health">💊 Health</option>
+        <option value="Education">📚 Education</option>
+        <option value="Airtime">📱 Airtime & Data</option>
+        <option value="Entertainment">🎉 Entertainment</option>
+        <option value="Savings">💰 Savings</option>
+        <option value="Other">📌 Other</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Date</label>
+      <input class="form-input" id="txDate" type="date" />
+    </div>
+    <button class="btn-primary" onclick="addTransaction()">Save Transaction</button>
+  </div>
+</div>
+
+<!-- HISTORY -->
+<div class="section" id="sec-history">
+  <span class="section-title">All Transactions</span>
+  <div class="tx-list" id="txList">
+    <div class="empty-state"><div class="empty-icon">📭</div><div class="empty-text">No transactions yet.</div></div>
+  </div>
+</div>
+
+<!-- SMS SYNC -->
+<div class="section" id="sec-sms">
+  <div class="sms-card">
+    <div class="sms-card-title">Select Your Network / Wallet</div>
+    <div class="provider-grid">
+      <button class="provider-card" id="card-mpesa" onclick="selectProvider('mpesa')">
+        <div class="provider-logo">🟢</div>
+        <div class="provider-name mpesa">M-PESA</div>
+        <div class="provider-sub">Safaricom</div>
+      </button>
+      <button class="provider-card" id="card-airtel" onclick="selectProvider('airtel')">
+        <div class="provider-logo">🔴</div>
+        <div class="provider-name airtel">Airtel Money</div>
+        <div class="provider-sub">Airtel Kenya</div>
+      </button>
+    </div>
+    <div id="providerNote" class="info-box" style="display:none"></div>
+  </div>
+
+  <div class="sms-card" id="howToCard" style="display:none">
+    <div class="sms-card-title">How to Copy Your SMS</div>
+    <div class="info-box">
+      <b>⚠️ Note:</b> Paste your M-Pesa or Airtel Money messages below.<br><br>
+      <b>On Android:</b>
+      <ol class="step-list" style="margin-top:6px">
+        <li>Open Messages app</li>
+        <li>Find messages from <b id="senderHint">MPESA</b></li>
+        <li>Long-press → Select All → Copy</li>
+        <li>Paste below</li>
+      </ol>
+    </div>
+  </div>
+
+  <div class="sms-card" id="pasteCard" style="display:none">
+    <div class="sms-card-title" id="pasteTitle">Paste SMS Messages</div>
+    <textarea class="paste-area" id="smsInput" placeholder="Paste your SMS messages here..."></textarea>
+    <div style="display:flex;gap:8px;margin-top:10px">
+      <button class="btn-primary" onclick="parseSMS()" style="flex:1">Parse & Import</button>
+      <button class="btn-secondary" onclick="document.getElementById('smsInput').value='';">Clear</button>
+    </div>
+  </div>
+
+  <div class="sms-card" id="demoCard" style="display:none">
+    <div class="sms-card-title">Test with Demo</div>
+    <button class="btn-secondary" onclick="loadDemo()" style="width:100%">Load Sample Messages</button>
+  </div>
+
+  <div class="sms-card" id="logCard" style="display:none">
+    <div class="sms-card-title">Import Log</div>
+    <div class="sms-log" id="smsLog"></div>
+    <div id="logSummary" style="margin-top:10px;font-size:0.75rem;color:var(--muted);font-family:var(--mono)"></div>
+  </div>
+</div>
+
+<!-- INSIGHTS -->
+<div class="section" id="sec-insights">
+  <div class="chart-wrap">
+    <div class="chart-title">Income vs Expenses – Last 7 Days</div>
+    <canvas id="lineChart" height="160"></canvas>
+  </div>
+  <span class="section-title">Spending by Category</span>
+  <div class="category-grid" id="categoryGrid">
+    <div style="grid-column:1/-1;text-align:center;color:var(--muted);font-size:0.83rem;padding:18px 0">No expense data yet.</div>
+  </div>
+</div>
+
+<!-- AI CHAT -->
+<div class="section" id="sec-ai">
+  <div class="quick-prompts">
+    <button class="quick-btn" onclick="quickPrompt('Analyze my spending habits')">📊 Habits</button>
+    <button class="quick-btn" onclick="quickPrompt('How can I save more money?')">💡 Save tips</button>
+    <button class="quick-btn" onclick="quickPrompt('Am I overspending on any category?')">⚠️ Overspend?</button>
+  </div>
+  <div class="ai-chat">
+    <div class="ai-header"><div class="ai-dot"></div><div class="ai-title">AI Financial Advisor</div></div>
+    <div class="ai-messages" id="aiMessages">
+      <div class="msg assistant">👋 Hi! Connect your transactions and I'll give you personalized Kenya-specific financial advice.</div>
+    </div>
+    <div class="ai-input-row">
+      <input class="ai-input" id="aiInput" placeholder="Ask about your finances…" onkeydown="if(event.key==='Enter')sendAI()" />
+      <button class="ai-send" onclick="sendAI()">Send</button>
+    </div>
+  </div>
+</div>
+
+<!-- SETTINGS -->
+<div class="section" id="sec-settings">
+  <div class="settings-section">
+    <div class="settings-title">Budget</div>
+    <div class="form-group">
+      <label class="form-label">Monthly Budget (KES)</label>
+      <div class="input-prefix">
+        <span class="prefix-label">KES</span>
+        <input class="form-input" id="budgetInput" type="number" placeholder="50000" />
+      </div>
+    </div>
+    <button class="btn-primary mt8" onclick="saveBudget()">Set Budget</button>
+  </div>
+  <div class="settings-section">
+    <div class="settings-title">Account</div>
+    <div class="settings-row">
+      <span class="settings-row-label">Email</span>
+      <span class="settings-row-value" id="userEmail">—</span>
+    </div>
+    <button class="btn-danger mt8" onclick="logout()">Logout</button>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<!-- BOTTOM NAV -->
+<div class="bottom-nav">
+  <button class="nav-item active" onclick="showSection('add');setNav(this)"><span class="nav-icon">➕</span>Add</button>
+  <button class="nav-item" onclick="showSection('history');setNav(this)"><span class="nav-icon">📋</span>History</button>
+  <button class="nav-item" onclick="showSection('sms');setNav(this)"><span class="nav-icon">📱</span>SMS</button>
+  <button class="nav-item" onclick="showSection('insights');setNav(this)"><span class="nav-icon">📊</span>Insights</button>
+  <button class="nav-item" onclick="showSection('ai');setNav(this)"><span class="nav-icon">🤖</span>AI</button>
+  <button class="nav-item" onclick="showSection('settings');setNav(this)"><span class="nav-icon">⚙️</span>Settings</button>
+</div>
+
+<script>
+// ==================== CONFIG ====================
+const API_BASE = 'https://moneymind-backend.onrender.com'; // ← UPDATE THIS AFTER DEPLOY
+
+let token = null;
+let currentUser = null;
+let transactions = [];
+let budget = 0;
+let activeProvider = null;
+let txType = 'income';
+
+// ==================== API HELPER ====================
+async function apiCall(endpoint, options = {}) {
+  const config = {
+    headers: {
+      'Content-Type': 'application/json',
+      ...(token && { 'Authorization': `Bearer ${token}` })
+    },
+    ...options
+  };
+
+  const res = await fetch(`${API_BASE}${endpoint}`, config);
+  
+  if (!res.ok) {
+    const errorData = await res.json().catch(() => ({}));
+    throw new Error(errorData.error || `HTTP ${res.status}`);
+  }
+  return res.json();
+}
+
+// ==================== AUTH ====================
+function switchAuthTab(tab) {
+  document.getElementById('loginForm').style.display = tab === 0 ? 'block' : 'none';
+  document.getElementById('registerForm').style.display = tab === 1 ? 'block' : 'none';
+  document.querySelectorAll('#authTabs .tab-btn').forEach((b,i) => b.classList.toggle('active', i===tab));
+}
+
+async function register() {
+  const name = document.getElementById('regName').value.trim();
+  const email = document.getElementById('regEmail').value.trim();
+  const password = document.getElementById('regPassword').value;
+
+  if (!name || !email || !password) return showToast('All fields required', 'error');
+
+  try {
+    const data = await apiCall('/api/auth/register', {
+      method: 'POST',
+      body: JSON.stringify({ name, email, password })
+    });
+    token = data.token;
+    currentUser = data.user;
+    localStorage.setItem('mm_token', token);
+    localStorage.setItem('mm_user', JSON.stringify(currentUser));
+    document.getElementById('authModal').style.display = 'none';
+    showToast('Account created! Welcome.', 'success');
+    loadInitialData();
+  } catch (e) {
+    showToast(e.message, 'error');
+  }
+}
+
+async function login() {
+  const email = document.getElementById('loginEmail').value.trim();
+  const password = document.getElementById('loginPassword').value;
+
+  try {
+    const data = await apiCall('/api/auth/login', {
+      method: 'POST',
+      body: JSON.stringify({ email, password })
+    });
+    token = data.token;
+    currentUser = data.user;
+    localStorage.setItem('mm_token', token);
+    localStorage.setItem('mm_user', JSON.stringify(currentUser));
+    document.getElementById('authModal').style.display = 'none';
+    showToast('Login successful!', 'success');
+    loadInitialData();
+  } catch (e) {
+    showToast(e.message || 'Login failed', 'error');
+  }
+}
+
+function logout() {
+  localStorage.removeItem('mm_token');
+  localStorage.removeItem('mm_user');
+  location.reload();
+}
+
+// ==================== DATA LOADING ====================
+async function loadInitialData() {
+  try {
+    const data = await apiCall('/api/transactions');
+    transactions = data;
+    const budgetData = await apiCall('/api/budget').catch(() => ({ budget: 0 }));
+    budget = budgetData.budget || 0;
+    document.getElementById('budgetInput').value = budget;
+    updateAll();
+  } catch (e) {
+    console.error(e);
+  }
+}
+
+// ==================== TRANSACTIONS ====================
+function setType(t) {
+  txType = t;
+  document.getElementById('btnIncome').classList.toggle('active', t==='income');
+  document.getElementById('btnExpense').classList.toggle('active', t==='expense');
+}
+
+async function addTransaction() {
+  const desc = document.getElementById('txDesc').value.trim();
+  const amount = parseFloat(document.getElementById('txAmount').value);
+  const cat = document.getElementById('txCategory').value;
+  const date = document.getElementById('txDate').value;
+
+  if (!desc || !amount || !date) {
+    return showToast('Please fill all fields', 'error');
+  }
+
+  try {
+    await apiCall('/api/transactions', {
+      method: 'POST',
+      body: JSON.stringify({ type: txType, amount, description: desc, category: cat, date })
+    });
+    loadInitialData();
+    document.getElementById('txDesc').value = '';
+    document.getElementById('txAmount').value = '';
+    showToast(txType === 'income' ? 'Income added ✓' : 'Expense added ✓', 'success');
+  } catch (e) {
+    showToast(e.message, 'error');
+  }
+}
+
+async function deleteTransaction(id) {
+  if (!confirm('Delete this transaction?')) return;
+  try {
+    await apiCall(`/api/transactions/${id}`, { method: 'DELETE' });
+    loadInitialData();
+    showToast('Transaction deleted', '');
+  } catch (e) {
+    showToast('Failed to delete', 'error');
+  }
+}
+
+// ==================== SMS ====================
+function selectProvider(p) {
+  activeProvider = p;
+  // ... same UI logic as before
+  document.querySelectorAll('.provider-card').forEach(c => c.classList.remove('selected'));
+  document.getElementById('card-'+p).classList.add('selected', p);
+  // Show cards and notes (simplified)
+  document.getElementById('howToCard').style.display = 'block';
+  document.getElementById('pasteCard').style.display = 'block';
+  document.getElementById('demoCard').style.display = 'block';
+  showToast(p.toUpperCase() + ' selected', 'success');
+}
+
+async function parseSMS() {
+  if (!activeProvider) return showToast('Select a provider first', 'error');
+  const text = document.getElementById('smsInput').value.trim();
+  if (!text) return showToast('Paste SMS messages', 'error');
+
+  try {
+    const res = await apiCall('/api/sms/parse', {
+      method: 'POST',
+      body: JSON.stringify({ text, provider: activeProvider })
+    });
+    showToast(`${res.imported || 0} transactions imported`, 'success');
+    loadInitialData();
+    document.getElementById('smsInput').value = '';
+  } catch (e) {
+    showToast(e.message, 'error');
+  }
+}
+
+function loadDemo() {
+  // Same as before - use the demo text from previous version
+  const demoText = activeProvider === 'mpesa' ? `QAB1234XYZW Confirmed. Ksh2,500.00 sent to JOHN DOE...` : `Txn ID:AM789012. You have sent KES 1,500...`;
+  document.getElementById('smsInput').value = demoText;
+  showToast('Demo loaded', 'success');
+}
+
+// ==================== UI UPDATES ====================
+function updateAll() {
+  const now = new Date();
+  const m = now.getMonth(), y = now.getFullYear();
+  const monthly = transactions.filter(t => {
+    const d = new Date(t.date);
+    return d.getMonth() === m && d.getFullYear() === y;
+  });
+  const income = monthly.filter(t=>t.type==='income').reduce((s,t)=>s+t.amount,0);
+  const expense = monthly.filter(t=>t.type==='expense').reduce((s,t)=>s+t.amount,0);
+  const balance = income - expense;
+
+  document.getElementById('heroBalance').textContent = 'KES ' + fmt(Math.abs(balance));
+  document.getElementById('heroBalance').className = 'hero-balance' + (balance < 0 ? ' negative' : '');
+  document.getElementById('heroSub').textContent = balance >= 0 ? "You're doing great! 🟢" : "Watch your spending ⚠️";
+  document.getElementById('totalIncome').textContent = 'KES ' + fmt(income);
+  document.getElementById('totalExpense').textContent = 'KES ' + fmt(expense);
+
+  if (budget > 0) {
+    const pct = Math.min((expense / budget) * 100, 100);
+    const bar = document.getElementById('budgetBar');
+    bar.style.width = pct + '%';
+    bar.className = 'bar-fill' + (pct >= 90 ? ' danger' : pct >= 70 ? ' warning' : '');
+    document.getElementById('barPct').textContent = Math.round(pct) + '%';
+  }
+  renderHistory();
+}
+
+function renderHistory() {
+  const list = document.getElementById('txList');
+  if (!transactions.length) {
+    list.innerHTML = `<div class="empty-state"><div class="empty-icon">📭</div><div class="empty-text">No transactions yet.</div></div>`;
+    return;
+  }
+  list.innerHTML = transactions.map(t => `
+    <div class="tx-item">
+      <div class="tx-icon ${t.type}">${getCatIcon(t.category)}</div>
+      <div class="tx-info">
+        <div class="tx-desc">${esc(t.description || t.desc)}</div>
+        <div class="tx-meta">${t.category} · ${fmtDate(t.date)}</div>
+      </div>
+      <div class="tx-amount ${t.type}">${t.type==='income' ? '+' : '-'}KES ${fmt(t.amount)}</div>
+      <button class="tx-delete" onclick="deleteTransaction(${t.id})">✕</button>
+    </div>
+  `).join('');
+}
+
+function getCatIcon(cat) {
+  const icons = {Salary:'💼',Food:'🍽️',Transport:'🚌',Rent:'🏠',Utilities:'💡',Shopping:'🛍️'};
+  return icons[cat] || '📌';
+}
+
+function fmt(n) { return Math.round(n).toLocaleString('en-KE'); }
+function fmtDate(d) { return new Date(d).toLocaleDateString('en-KE', {month:'short', day:'numeric'}); }
+function esc(s) { return s ? s.replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])) : ''; }
+
+// ==================== NAV & SECTIONS ====================
+function showSection(id) {
+  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+  document.getElementById('sec-'+id).classList.add('active');
+}
+
+function setNav(el) {
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  el.classList.add('active');
+}
+
+// ==================== TOAST ====================
+function showToast(msg, type='') {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = `toast show ${type}`;
+  setTimeout(() => t.className = 'toast', 2800);
+}
+
+// ==================== AI (Simplified) ====================
+function quickPrompt(txt) { document.getElementById('aiInput').value = txt; sendAI(); }
+
+async function sendAI() {
+  const input = document.getElementById('aiInput');
+  const msg = input.value.trim();
+  if (!msg) return;
+  input.value = '';
+  appendMsg('user', msg);
+  const loading = appendMsg('assistant', 'Thinking...', true);
+
+  try {
+    const data = await apiCall('/api/ai/chat', {
+      method: 'POST',
+      body: JSON.stringify({ message: msg })
+    });
+    loading.textContent = data.reply;
+    loading.classList.remove('loading');
+  } catch (e) {
+    loading.textContent = 'Sorry, AI is unavailable right now.';
+    loading.classList.remove('loading');
+  }
+}
+
+function appendMsg(role, text, isLoading=false) {
+  const container = document.getElementById('aiMessages');
+  const div = document.createElement('div');
+  div.className = `msg ${role} ${isLoading ? 'loading' : ''}`;
+  div.textContent = text;
+  container.appendChild(div);
+  container.scrollTop = container.scrollHeight;
+  return div;
+}
+
+// ==================== INIT ====================
+async function initApp() {
+  token = localStorage.getItem('mm_token');
+  if (token) {
+    currentUser = JSON.parse(localStorage.getItem('mm_user') || '{}');
+    document.getElementById('authModal').style.display = 'none';
+    await loadInitialData();
+  } else {
+    document.getElementById('authModal').style.display = 'flex';
+  }
+
+  document.getElementById('txDate').value = new Date().toISOString().split('T')[0];
+  document.getElementById('currentMonth').textContent = new Date().toLocaleDateString('en-KE', {month:'long', year:'numeric'});
+}
+
+initApp();
+</script>
+</body>
+</html>
