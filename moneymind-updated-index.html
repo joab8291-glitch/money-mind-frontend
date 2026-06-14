@@ -26,6 +26,10 @@ nav { display:flex; align-items:center; justify-content:space-between; padding:1
 .nav-logo { font-family:var(--mono); font-size:1.1rem; font-weight:700; color:var(--accent); }
 .nav-logo span { color:var(--text); }
 .nav-month { font-size:0.75rem; color:var(--muted); font-family:var(--mono); }
+.nav-user { display:flex; align-items:center; gap:12px; }
+.user-greeting { color:var(--accent); font-size:0.85rem; font-family:var(--mono); }
+.logout-btn { background:none; border:none; color:var(--muted); cursor:pointer; font-size:0.8rem; font-family:var(--mono); padding:4px 8px; border-radius:6px; transition:all 0.2s; }
+.logout-btn:hover { color:var(--danger); background:rgba(255,90,90,0.1); }
 
 /* HERO */
 .hero { padding:24px 20px 18px; background:linear-gradient(160deg,var(--surface) 0%,var(--bg) 100%); border-bottom:1px solid var(--border); }
@@ -161,6 +165,12 @@ nav { display:flex; align-items:center; justify-content:space-between; padding:1
 /* INSIGHTS */
 .chart-wrap { background:var(--card); border:1px solid var(--border); border-radius:var(--r); padding:14px; margin-bottom:12px; }
 .chart-title { font-size:0.68rem; font-family:var(--mono); color:var(--muted); text-transform:uppercase; letter-spacing:1.5px; margin-bottom:10px; }
+.monthly-summary-card { background:var(--card); border:1px solid var(--border); border-radius:var(--r); padding:16px; margin-bottom:16px; }
+.summary-grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-top:8px; }
+.summary-item { text-align:center; }
+.summary-label { font-size:0.68rem; color:var(--muted); font-family:var(--mono); text-transform:uppercase; letter-spacing:1px; margin-bottom:5px; }
+.summary-income { font-weight:700; font-size:1.2rem; color:var(--income-c); font-family:var(--mono); }
+.summary-expense { font-weight:700; font-size:1.2rem; color:var(--expense-c); font-family:var(--mono); }
 .category-grid { display:grid; grid-template-columns:1fr 1fr; gap:9px; margin-bottom:16px; }
 .cat-card { background:var(--card); border:1px solid var(--border); border-radius:var(--r); padding:12px; }
 .cat-icon { font-size:1.2rem; margin-bottom:4px; }
@@ -257,7 +267,10 @@ nav { display:flex; align-items:center; justify-content:space-between; padding:1
 <nav>
   <div class="nav-logo">Money<span>Mind</span></div>
   <div class="nav-month" id="currentMonth">—</div>
-  <button onclick="logout()" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:0.9rem;">Logout</button>
+  <div class="nav-user">
+    <span id="userGreeting" class="user-greeting" style="display:none;"></span>
+    <button class="logout-btn" onclick="logout()">Logout</button>
+  </div>
 </nav>
 
 <!-- SYNC BANNER -->
@@ -417,6 +430,21 @@ nav { display:flex; align-items:center; justify-content:space-between; padding:1
 
 <!-- INSIGHTS -->
 <div class="section" id="sec-insights">
+  <!-- Monthly Summary Card - NEW -->
+  <div class="monthly-summary-card">
+    <div class="form-title">📊 This Month at a Glance</div>
+    <div class="summary-grid">
+      <div class="summary-item">
+        <div class="summary-label">Total Income</div>
+        <div class="summary-income" id="summaryIncome">KES 0</div>
+      </div>
+      <div class="summary-item">
+        <div class="summary-label">Total Expenses</div>
+        <div class="summary-expense" id="summaryExpense">KES 0</div>
+      </div>
+    </div>
+  </div>
+  
   <div class="chart-wrap">
     <div class="chart-title">Income vs Expenses – Last 7 Days</div>
     <canvas id="lineChart" height="160"></canvas>
@@ -484,7 +512,8 @@ nav { display:flex; align-items:center; justify-content:space-between; padding:1
 
 <script>
 // ==================== CONFIG ====================
-const API_BASE = 'https://moneymind-backend.onrender.com'; // ← UPDATE THIS AFTER DEPLOY
+// FIXED: Correct backend URL from your images
+const API_BASE = 'https://money-mind-backend-tzih.onrender.com';
 
 let token = null;
 let currentUser = null;
@@ -519,6 +548,21 @@ function switchAuthTab(tab) {
   document.querySelectorAll('#authTabs .tab-btn').forEach((b,i) => b.classList.toggle('active', i===tab));
 }
 
+// NEW: Show user greeting after login
+function showUserGreeting() {
+  const greetingEl = document.getElementById('userGreeting');
+  if (currentUser && currentUser.name) {
+    const firstName = currentUser.name.split(' ')[0];
+    greetingEl.textContent = `Hi, ${firstName}`;
+    greetingEl.style.display = 'inline-block';
+  } else if (currentUser && currentUser.email) {
+    greetingEl.textContent = `Hi, ${currentUser.email.split('@')[0]}`;
+    greetingEl.style.display = 'inline-block';
+  } else {
+    greetingEl.style.display = 'none';
+  }
+}
+
 async function register() {
   const name = document.getElementById('regName').value.trim();
   const email = document.getElementById('regEmail').value.trim();
@@ -536,6 +580,7 @@ async function register() {
     localStorage.setItem('mm_token', token);
     localStorage.setItem('mm_user', JSON.stringify(currentUser));
     document.getElementById('authModal').style.display = 'none';
+    showUserGreeting(); // Show name after login
     showToast('Account created! Welcome.', 'success');
     loadInitialData();
   } catch (e) {
@@ -547,6 +592,8 @@ async function login() {
   const email = document.getElementById('loginEmail').value.trim();
   const password = document.getElementById('loginPassword').value;
 
+  if (!email || !password) return showToast('Email and password required', 'error');
+
   try {
     const data = await apiCall('/api/auth/login', {
       method: 'POST',
@@ -557,6 +604,7 @@ async function login() {
     localStorage.setItem('mm_token', token);
     localStorage.setItem('mm_user', JSON.stringify(currentUser));
     document.getElementById('authModal').style.display = 'none';
+    showUserGreeting(); // Show name after login
     showToast('Login successful!', 'success');
     loadInitialData();
   } catch (e) {
@@ -581,6 +629,7 @@ async function loadInitialData() {
     updateAll();
   } catch (e) {
     console.error(e);
+    showToast('Failed to load data', 'error');
   }
 }
 
@@ -629,13 +678,17 @@ async function deleteTransaction(id) {
 // ==================== SMS ====================
 function selectProvider(p) {
   activeProvider = p;
-  // ... same UI logic as before
   document.querySelectorAll('.provider-card').forEach(c => c.classList.remove('selected'));
-  document.getElementById('card-'+p).classList.add('selected', p);
-  // Show cards and notes (simplified)
+  const card = document.getElementById('card-'+p);
+  card.classList.add('selected', p);
+  
   document.getElementById('howToCard').style.display = 'block';
   document.getElementById('pasteCard').style.display = 'block';
   document.getElementById('demoCard').style.display = 'block';
+  
+  const senderHint = document.getElementById('senderHint');
+  if (senderHint) senderHint.textContent = p === 'mpesa' ? 'MPESA' : 'Airtel Money';
+  
   showToast(p.toUpperCase() + ' selected', 'success');
 }
 
@@ -658,10 +711,28 @@ async function parseSMS() {
 }
 
 function loadDemo() {
-  // Same as before - use the demo text from previous version
-  const demoText = activeProvider === 'mpesa' ? `QAB1234XYZW Confirmed. Ksh2,500.00 sent to JOHN DOE...` : `Txn ID:AM789012. You have sent KES 1,500...`;
+  const demoText = activeProvider === 'mpesa' 
+    ? `MPESA Confirmed. Ksh2,500.00 sent to JOHN DOE on 15/06/2025 at 10:30 AM. New balance Ksh 12,450.00.\nMPESA Received. Ksh10,000.00 from JANE SMITH on 14/06/2025. New balance Ksh 14,950.00.`
+    : `Airtel Money: Txn ID:AM789012. You have sent KES 1,500 to PETER OCHIENG on 15/06/2025. Fee KES 0. Balance KES 8,200.`;
   document.getElementById('smsInput').value = demoText;
   showToast('Demo loaded', 'success');
+}
+
+async function saveBudget() {
+  const amount = parseFloat(document.getElementById('budgetInput').value);
+  if (isNaN(amount)) return showToast('Enter a valid amount', 'error');
+  
+  try {
+    await apiCall('/api/budget', {
+      method: 'POST',
+      body: JSON.stringify({ budget: amount })
+    });
+    budget = amount;
+    updateAll();
+    showToast('Budget saved to database ✅', 'success');
+  } catch (e) {
+    showToast(e.message, 'error');
+  }
 }
 
 // ==================== UI UPDATES ====================
@@ -681,6 +752,12 @@ function updateAll() {
   document.getElementById('heroSub').textContent = balance >= 0 ? "You're doing great! 🟢" : "Watch your spending ⚠️";
   document.getElementById('totalIncome').textContent = 'KES ' + fmt(income);
   document.getElementById('totalExpense').textContent = 'KES ' + fmt(expense);
+  
+  // Update monthly summary card in Insights
+  const summaryIncome = document.getElementById('summaryIncome');
+  const summaryExpense = document.getElementById('summaryExpense');
+  if (summaryIncome) summaryIncome.textContent = 'KES ' + fmt(income);
+  if (summaryExpense) summaryExpense.textContent = 'KES ' + fmt(expense);
 
   if (budget > 0) {
     const pct = Math.min((expense / budget) * 100, 100);
@@ -712,7 +789,7 @@ function renderHistory() {
 }
 
 function getCatIcon(cat) {
-  const icons = {Salary:'💼',Food:'🍽️',Transport:'🚌',Rent:'🏠',Utilities:'💡',Shopping:'🛍️'};
+  const icons = {Salary:'💼',Food:'🍽️',Transport:'🚌',Rent:'🏠',Utilities:'💡',Shopping:'🛍️',Health:'💊',Education:'📚',Entertainment:'🎉',Savings:'💰',Airtime:'📱'};
   return icons[cat] || '📌';
 }
 
@@ -739,7 +816,7 @@ function showToast(msg, type='') {
   setTimeout(() => t.className = 'toast', 2800);
 }
 
-// ==================== AI (Simplified) ====================
+// ==================== AI ====================
 function quickPrompt(txt) { document.getElementById('aiInput').value = txt; sendAI(); }
 
 async function sendAI() {
@@ -776,12 +853,25 @@ function appendMsg(role, text, isLoading=false) {
 // ==================== INIT ====================
 async function initApp() {
   token = localStorage.getItem('mm_token');
-  if (token) {
-    currentUser = JSON.parse(localStorage.getItem('mm_user') || '{}');
+  const savedUser = localStorage.getItem('mm_user');
+  
+  if (token && savedUser) {
+    currentUser = JSON.parse(savedUser);
+    document.getElementById('authModal').style.display = 'none';
+    showUserGreeting(); // Show name on page load if already logged in
+    await loadInitialData();
+  } else if (token) {
+    // Token exists but no user data - try to fetch
     document.getElementById('authModal').style.display = 'none';
     await loadInitialData();
   } else {
     document.getElementById('authModal').style.display = 'flex';
+  }
+
+  // Set email in settings
+  if (currentUser && currentUser.email) {
+    const userEmailEl = document.getElementById('userEmail');
+    if (userEmailEl) userEmailEl.textContent = currentUser.email;
   }
 
   document.getElementById('txDate').value = new Date().toISOString().split('T')[0];
@@ -790,39 +880,5 @@ async function initApp() {
 
 initApp();
 </script>
-<div id="authModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.75); z-index:300; align-items:center; justify-content:center;">
-  <div style="background:#132033; padding:28px; border-radius:16px; width:92%; max-width:380px; border:1px solid #243547;">
-    <h2 style="margin-bottom:18px; text-align:center; color:#00E5A0;">Welcome to MoneyMind</h2>
-    
-    <div style="display:flex; margin-bottom:18px; border-radius:8px; overflow:hidden;">
-      <button onclick="switchAuthTab('login')" id="loginTab" 
-              style="flex:1; padding:11px; background:#00E5A0; color:#0D1B2A; border:none; font-weight:700;">Login</button>
-      <button onclick="switchAuthTab('register')" id="registerTab" 
-              style="flex:1; padding:11px; background:#243547; color:white; border:none; font-weight:700;">Register</button>
-    </div>
-
-    <!-- Login Form -->
-    <div id="loginForm">
-      <input type="email" id="loginEmail" placeholder="Email Address" 
-             style="width:100%; padding:12px; margin-bottom:12px; border-radius:8px; border:1px solid #243547; background:#0D1B2A; color:white; font-size:15px;">
-      <input type="password" id="loginPassword" placeholder="Password" 
-             style="width:100%; padding:12px; margin-bottom:20px; border-radius:8px; border:1px solid #243547; background:#0D1B2A; color:white; font-size:15px;">
-      <button onclick="loginUser()" 
-              style="width:100%; padding:14px; background:#00E5A0; color:#0D1B2A; border:none; border-radius:8px; font-weight:700; font-size:15px;">Login</button>
-    </div>
-
-    <!-- Register Form -->
-    <div id="registerForm" style="display:none;">
-      <input type="text" id="regName" placeholder="Full Name" 
-             style="width:100%; padding:12px; margin-bottom:12px; border-radius:8px; border:1px solid #243547; background:#0D1B2A; color:white; font-size:15px;">
-      <input type="email" id="regEmail" placeholder="Email Address" 
-             style="width:100%; padding:12px; margin-bottom:12px; border-radius:8px; border:1px solid #243547; background:#0D1B2A; color:white; font-size:15px;">
-      <input type="password" id="regPassword" placeholder="Password (min 6 characters)" 
-             style="width:100%; padding:12px; margin-bottom:20px; border-radius:8px; border:1px solid #243547; background:#0D1B2A; color:white; font-size:15px;">
-      <button onclick="registerUser()" 
-              style="width:100%; padding:14px; background:#00E5A0; color:#0D1B2A; border:none; border-radius:8px; font-weight:700; font-size:15px;">Create Account</button>
-    </div>
-  </div>
-</div>
 </body>
 </html>
