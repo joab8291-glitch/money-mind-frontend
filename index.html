@@ -1,0 +1,1135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>MoneyMind – Smart Budget for Kenya</title>
+<meta name="description" content="AI-powered personal budget tracker with M-Pesa & Airtel Money SMS sync for Kenya." />
+<meta name="theme-color" content="#0D1B2A" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet" />
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --bg:#0D1B2A; --surface:#132033; --card:#1A2B3C; --border:#243547;
+  --accent:#00E5A0; --accent2:#F5A623; --danger:#FF5A5A;
+  --mpesa:#4CAF50; --airtel:#FF6B35; --text:#E8F0F7; --muted:#6B8BA4;
+  --income-c:#00E5A0; --expense-c:#FF5A5A;
+  --font:'Space Grotesk',sans-serif; --mono:'Space Mono',monospace; --r:12px;
+}
+html { scroll-behavior:smooth; }
+body { font-family:var(--font); background:var(--bg); color:var(--text); min-height:100vh; line-height:1.6; }
+
+/* NAV */
+nav { display:flex; align-items:center; justify-content:space-between; padding:14px 20px; background:var(--surface); border-bottom:1px solid var(--border); position:sticky; top:0; z-index:100; }
+.nav-logo { font-family:var(--mono); font-size:1.1rem; font-weight:700; color:var(--accent); }
+.nav-logo span { color:var(--text); }
+.nav-month { font-size:0.75rem; color:var(--muted); font-family:var(--mono); }
+
+/* HERO */
+.hero { padding:24px 20px 18px; background:linear-gradient(160deg,var(--surface) 0%,var(--bg) 100%); border-bottom:1px solid var(--border); }
+.hero-label { font-size:0.65rem; font-family:var(--mono); color:var(--muted); letter-spacing:2px; text-transform:uppercase; margin-bottom:4px; }
+.hero-balance { font-family:var(--mono); font-size:clamp(1.9rem,8vw,3rem); font-weight:700; color:var(--accent); letter-spacing:-1px; line-height:1; margin-bottom:4px; }
+.hero-balance.negative { color:var(--danger); }
+.hero-sub { font-size:0.76rem; color:var(--muted); margin-bottom:16px; }
+.summary-row { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+.summary-card { background:var(--card); border:1px solid var(--border); border-radius:var(--r); padding:12px; }
+.summary-card-label { font-size:0.62rem; font-family:var(--mono); text-transform:uppercase; letter-spacing:1.5px; color:var(--muted); margin-bottom:3px; }
+.summary-card-value { font-family:var(--mono); font-size:1.1rem; font-weight:700; }
+.income-val { color:var(--income-c); } .expense-val { color:var(--expense-c); }
+
+/* SYNC BANNER */
+.sync-banner { display:flex; align-items:center; justify-content:space-between; gap:10px; padding:10px 20px; background:var(--surface); border-bottom:1px solid var(--border); }
+.sync-info { display:flex; align-items:center; gap:8px; }
+.sim-badge { padding:3px 8px; border-radius:99px; font-size:0.65rem; font-family:var(--mono); font-weight:700; }
+.sim-badge.mpesa   { background:rgba(76,175,80,0.15); color:var(--mpesa); border:1px solid rgba(76,175,80,0.3); }
+.sim-badge.airtel  { background:rgba(255,107,53,0.15); color:var(--airtel); border:1px solid rgba(255,107,53,0.3); }
+.sim-badge.unknown { background:rgba(107,139,164,0.15); color:var(--muted); border:1px solid var(--border); }
+.sync-status { font-size:0.7rem; color:var(--muted); font-family:var(--mono); }
+.btn-sync { padding:7px 14px; background:var(--accent); border:none; border-radius:8px; color:var(--bg); font-family:var(--mono); font-size:0.72rem; font-weight:700; cursor:pointer; white-space:nowrap; }
+.btn-sync:disabled { opacity:0.5; cursor:not-allowed; }
+
+/* BUDGET BAR */
+.budget-bar-wrap { padding:14px 20px 0; }
+.bar-labels { display:flex; justify-content:space-between; margin-bottom:5px; }
+.bar-label { font-size:0.7rem; color:var(--muted); font-family:var(--mono); }
+.bar-track { width:100%; height:7px; background:var(--border); border-radius:99px; overflow:hidden; }
+.bar-fill { height:100%; border-radius:99px; background:var(--accent); transition:width 0.6s cubic-bezier(.4,0,.2,1); }
+.bar-fill.warning { background:var(--accent2); } .bar-fill.danger { background:var(--danger); }
+
+/* TABS */
+.tabs { display:flex; gap:4px; padding:14px 20px 0; overflow-x:auto; scrollbar-width:none; }
+.tabs::-webkit-scrollbar { display:none; }
+.tab-btn { flex-shrink:0; padding:7px 14px; border-radius:99px; border:1px solid var(--border); background:transparent; color:var(--muted); font-family:var(--font); font-size:0.78rem; font-weight:500; cursor:pointer; transition:all 0.2s; }
+.tab-btn.active { background:var(--accent); border-color:var(--accent); color:var(--bg); font-weight:700; }
+
+/* SECTIONS */
+.section { display:none; padding:14px 20px 100px; }
+.section.active { display:block; }
+
+/* FORM */
+.form-card { background:var(--card); border:1px solid var(--border); border-radius:var(--r); padding:16px; margin-bottom:16px; }
+.form-title { font-size:0.72rem; font-family:var(--mono); color:var(--muted); text-transform:uppercase; letter-spacing:1.5px; margin-bottom:12px; }
+.type-toggle { display:grid; grid-template-columns:1fr 1fr; gap:6px; margin-bottom:12px; }
+.type-btn { padding:9px; border-radius:8px; border:1px solid var(--border); background:transparent; color:var(--muted); font-family:var(--font); font-size:0.82rem; font-weight:600; cursor:pointer; transition:all 0.2s; }
+.type-btn.income.active  { background:rgba(0,229,160,0.12); border-color:var(--income-c); color:var(--income-c); }
+.type-btn.expense.active { background:rgba(255,90,90,0.12); border-color:var(--expense-c); color:var(--expense-c); }
+.form-group { margin-bottom:11px; }
+.form-label { display:block; font-size:0.68rem; color:var(--muted); font-family:var(--mono); margin-bottom:4px; text-transform:uppercase; letter-spacing:1px; }
+.form-input, .form-select { width:100%; padding:10px 13px; background:var(--bg); border:1px solid var(--border); border-radius:8px; color:var(--text); font-family:var(--font); font-size:0.88rem; outline:none; transition:border-color 0.2s; appearance:none; }
+.form-input:focus, .form-select:focus { border-color:var(--accent); }
+.form-input::placeholder { color:var(--muted); }
+.input-prefix { display:flex; align-items:center; }
+.prefix-label { padding:10px 11px; background:var(--border); border:1px solid var(--border); border-right:none; border-radius:8px 0 0 8px; color:var(--muted); font-family:var(--mono); font-size:0.82rem; }
+.input-prefix .form-input { border-radius:0 8px 8px 0; }
+.btn-primary { width:100%; padding:12px; background:var(--accent); color:var(--bg); border:none; border-radius:8px; font-family:var(--font); font-size:0.88rem; font-weight:700; cursor:pointer; transition:opacity 0.2s,transform 0.1s; }
+.btn-primary:active { transform:scale(0.98); opacity:0.9; }
+
+/* TX LIST */
+.tx-list { display:flex; flex-direction:column; gap:7px; }
+.tx-item { display:flex; align-items:center; gap:11px; background:var(--card); border:1px solid var(--border); border-radius:var(--r); padding:11px 13px; animation:slideIn 0.25s ease; }
+@keyframes slideIn { from{opacity:0;transform:translateY(-5px)} to{opacity:1;transform:translateY(0)} }
+.tx-icon { width:36px; height:36px; border-radius:9px; display:flex; align-items:center; justify-content:center; font-size:1rem; flex-shrink:0; }
+.tx-icon.income  { background:rgba(0,229,160,0.12); }
+.tx-icon.expense { background:rgba(255,90,90,0.12); }
+.tx-info { flex:1; min-width:0; }
+.tx-desc { font-size:0.85rem; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.tx-meta { font-size:0.67rem; color:var(--muted); font-family:var(--mono); }
+.tx-source { display:inline-block; padding:1px 5px; border-radius:4px; font-size:0.6rem; font-family:var(--mono); margin-left:4px; vertical-align:middle; }
+.tx-source.mpesa  { background:rgba(76,175,80,0.2); color:var(--mpesa); }
+.tx-source.airtel { background:rgba(255,107,53,0.2); color:var(--airtel); }
+.tx-source.manual { background:rgba(107,139,164,0.15); color:var(--muted); }
+.tx-amount { font-family:var(--mono); font-size:0.88rem; font-weight:700; flex-shrink:0; }
+.tx-amount.income { color:var(--income-c); } .tx-amount.expense { color:var(--expense-c); }
+.tx-delete { background:none; border:none; color:var(--muted); cursor:pointer; font-size:0.82rem; padding:3px; border-radius:4px; transition:color 0.2s; flex-shrink:0; }
+.tx-delete:hover { color:var(--danger); }
+.empty-state { text-align:center; padding:36px 20px; color:var(--muted); }
+.empty-icon { font-size:2.2rem; margin-bottom:8px; }
+.empty-text { font-size:0.83rem; }
+
+/* SMS SYNC SECTION */
+.sms-card { background:var(--card); border:1px solid var(--border); border-radius:var(--r); padding:16px; margin-bottom:14px; }
+.sms-card-title { font-size:0.72rem; font-family:var(--mono); color:var(--muted); text-transform:uppercase; letter-spacing:1.5px; margin-bottom:12px; }
+.provider-grid { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:14px; }
+.provider-card { border:2px solid var(--border); border-radius:10px; padding:12px; cursor:pointer; transition:all 0.2s; background:transparent; text-align:center; }
+.provider-card.selected.mpesa  { border-color:var(--mpesa); background:rgba(76,175,80,0.08); }
+.provider-card.selected.airtel { border-color:var(--airtel); background:rgba(255,107,53,0.08); }
+.provider-card:hover { border-color:var(--accent); }
+.provider-logo { font-size:1.6rem; margin-bottom:4px; }
+.provider-name { font-size:0.78rem; font-weight:700; }
+.provider-name.mpesa  { color:var(--mpesa); }
+.provider-name.airtel { color:var(--airtel); }
+.provider-sub { font-size:0.65rem; color:var(--muted); font-family:var(--mono); margin-top:2px; }
+
+.sms-log { background:var(--bg); border:1px solid var(--border); border-radius:8px; padding:12px; max-height:220px; overflow-y:auto; font-family:var(--mono); font-size:0.72rem; color:var(--muted); line-height:1.7; }
+.sms-log .log-ok  { color:var(--income-c); }
+.sms-log .log-exp { color:var(--expense-c); }
+.sms-log .log-skip{ color:var(--muted); }
+.sms-log .log-err { color:var(--danger); }
+
+.paste-area { width:100%; min-height:90px; padding:10px 13px; background:var(--bg); border:1px solid var(--border); border-radius:8px; color:var(--text); font-family:var(--mono); font-size:0.75rem; outline:none; resize:vertical; transition:border-color 0.2s; }
+.paste-area:focus { border-color:var(--accent); }
+.paste-area::placeholder { color:var(--muted); }
+
+.info-box { background:rgba(0,229,160,0.06); border:1px solid rgba(0,229,160,0.2); border-radius:8px; padding:12px; font-size:0.76rem; color:var(--muted); line-height:1.6; margin-bottom:12px; }
+.info-box b { color:var(--accent); }
+.step-list { list-style:none; counter-reset:steps; }
+.step-list li { counter-increment:steps; padding:5px 0 5px 28px; position:relative; font-size:0.78rem; }
+.step-list li::before { content:counter(steps); position:absolute; left:0; top:5px; width:18px; height:18px; background:var(--accent); color:var(--bg); border-radius:50%; font-family:var(--mono); font-size:0.65rem; font-weight:700; display:flex; align-items:center; justify-content:center; }
+
+/* AI */
+.ai-chat { background:var(--card); border:1px solid var(--border); border-radius:var(--r); overflow:hidden; margin-bottom:14px; }
+.ai-header { display:flex; align-items:center; gap:9px; padding:12px 15px; border-bottom:1px solid var(--border); background:var(--surface); }
+.ai-dot { width:7px; height:7px; border-radius:50%; background:var(--accent); animation:pulse 2s infinite; }
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
+.ai-title { font-size:0.78rem; font-family:var(--mono); color:var(--accent); font-weight:700; }
+.ai-messages { padding:12px; min-height:110px; max-height:300px; overflow-y:auto; display:flex; flex-direction:column; gap:9px; }
+.msg { max-width:88%; padding:9px 12px; border-radius:10px; font-size:0.82rem; line-height:1.5; animation:slideIn 0.2s ease; }
+.msg.assistant { background:var(--surface); border:1px solid var(--border); align-self:flex-start; border-radius:4px 10px 10px 10px; }
+.msg.user { background:rgba(0,229,160,0.1); border:1px solid rgba(0,229,160,0.2); align-self:flex-end; border-radius:10px 4px 10px 10px; color:var(--accent); }
+.msg.loading { color:var(--muted); font-style:italic; }
+.ai-input-row { display:flex; gap:7px; padding:10px 13px; border-top:1px solid var(--border); background:var(--surface); }
+.ai-input { flex:1; padding:9px 12px; background:var(--bg); border:1px solid var(--border); border-radius:8px; color:var(--text); font-family:var(--font); font-size:0.83rem; outline:none; }
+.ai-input:focus { border-color:var(--accent); }
+.ai-send { padding:9px 13px; background:var(--accent); border:none; border-radius:8px; color:var(--bg); font-family:var(--mono); font-weight:700; font-size:0.82rem; cursor:pointer; }
+.ai-send:disabled { opacity:0.5; cursor:not-allowed; }
+.quick-prompts { display:flex; flex-wrap:wrap; gap:5px; margin-bottom:12px; }
+.quick-btn { padding:5px 11px; background:var(--card); border:1px solid var(--border); border-radius:99px; color:var(--muted); font-size:0.72rem; font-family:var(--font); cursor:pointer; transition:all 0.2s; }
+.quick-btn:hover { border-color:var(--accent); color:var(--accent); }
+
+/* INSIGHTS */
+.chart-wrap { background:var(--card); border:1px solid var(--border); border-radius:var(--r); padding:14px; margin-bottom:12px; }
+.chart-title { font-size:0.68rem; font-family:var(--mono); color:var(--muted); text-transform:uppercase; letter-spacing:1.5px; margin-bottom:10px; }
+.category-grid { display:grid; grid-template-columns:1fr 1fr; gap:9px; margin-bottom:16px; }
+.cat-card { background:var(--card); border:1px solid var(--border); border-radius:var(--r); padding:12px; }
+.cat-icon { font-size:1.2rem; margin-bottom:4px; }
+.cat-name { font-size:0.74rem; color:var(--muted); font-family:var(--mono); margin-bottom:2px; }
+.cat-amount { font-family:var(--mono); font-size:0.95rem; font-weight:700; color:var(--expense-c); }
+.cat-bar-wrap { margin-top:7px; background:var(--border); height:4px; border-radius:99px; overflow:hidden; }
+.cat-bar { height:100%; border-radius:99px; background:var(--accent2); transition:width 0.5s; }
+
+/* SETTINGS */
+.settings-section { margin-bottom:20px; }
+.settings-title { font-size:0.68rem; font-family:var(--mono); color:var(--muted); text-transform:uppercase; letter-spacing:1.5px; margin-bottom:9px; padding-bottom:5px; border-bottom:1px solid var(--border); }
+.settings-row { display:flex; align-items:center; justify-content:space-between; padding:11px 0; border-bottom:1px solid var(--border); }
+.settings-row-label { font-size:0.83rem; }
+.settings-row-value { font-size:0.77rem; color:var(--muted); font-family:var(--mono); }
+.btn-secondary { padding:9px 15px; background:transparent; border:1px solid var(--border); border-radius:8px; color:var(--muted); font-family:var(--font); font-size:0.78rem; cursor:pointer; transition:all 0.2s; }
+.btn-secondary:hover { border-color:var(--accent); color:var(--accent); }
+.btn-danger { padding:9px 15px; background:transparent; border:1px solid var(--danger); border-radius:8px; color:var(--danger); font-family:var(--font); font-size:0.78rem; cursor:pointer; }
+
+/* TOAST */
+.toast { position:fixed; bottom:78px; left:50%; transform:translateX(-50%) translateY(18px); background:var(--surface); border:1px solid var(--border); border-radius:99px; padding:9px 18px; font-size:0.78rem; font-family:var(--mono); color:var(--text); opacity:0; transition:all 0.3s; pointer-events:none; z-index:200; white-space:nowrap; }
+.toast.show { opacity:1; transform:translateX(-50%) translateY(0); }
+.toast.success { border-color:var(--accent); color:var(--accent); }
+.toast.error   { border-color:var(--danger); color:var(--danger); }
+
+/* BOTTOM NAV */
+.bottom-nav { position:fixed; bottom:0; left:0; right:0; display:flex; background:var(--surface); border-top:1px solid var(--border); z-index:100; }
+.nav-item { flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:9px 4px; cursor:pointer; border:none; background:transparent; color:var(--muted); font-size:0.58rem; font-family:var(--mono); text-transform:uppercase; letter-spacing:0.5px; transition:color 0.2s; gap:2px; }
+.nav-item .nav-icon { font-size:1rem; }
+.nav-item.active { color:var(--accent); }
+
+/* UTILS */
+.mt8 { margin-top:8px; }
+.mt12 { margin-top:12px; }
+.section-title { font-size:0.68rem; font-family:var(--mono); color:var(--muted); text-transform:uppercase; letter-spacing:1.5px; margin-bottom:9px; display:block; }
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav>
+  <div class="nav-logo">Money<span>Mind</span></div>
+  <div class="nav-month" id="currentMonth">—</div>
+</nav>
+
+<!-- SYNC BANNER -->
+<div class="sync-banner">
+  <div class="sync-info">
+    <span class="sim-badge unknown" id="simBadge">No SIM</span>
+    <span class="sync-status" id="syncStatus">Not synced</span>
+  </div>
+  <button class="btn-sync" id="btnSync" onclick="showSection('sms');setNav(document.querySelectorAll('.nav-item')[2])">Sync SMS</button>
+</div>
+
+<!-- HERO -->
+<div class="hero">
+  <div class="hero-label">Net Balance</div>
+  <div class="hero-balance" id="heroBalance">KES 0</div>
+  <div class="hero-sub" id="heroSub">Start by adding a transaction</div>
+  <div class="summary-row">
+    <div class="summary-card">
+      <div class="summary-card-label">Income</div>
+      <div class="summary-card-value income-val" id="totalIncome">KES 0</div>
+    </div>
+    <div class="summary-card">
+      <div class="summary-card-label">Expenses</div>
+      <div class="summary-card-value expense-val" id="totalExpense">KES 0</div>
+    </div>
+  </div>
+</div>
+
+<!-- BUDGET BAR -->
+<div class="budget-bar-wrap">
+  <div class="bar-labels">
+    <span class="bar-label">Budget used</span>
+    <span class="bar-label" id="barPct">0%</span>
+  </div>
+  <div class="bar-track"><div class="bar-fill" id="budgetBar" style="width:0%"></div></div>
+</div>
+
+<!-- TABS -->
+<div class="tabs">
+  <button class="tab-btn active" onclick="showSection('add')">+ Add</button>
+  <button class="tab-btn" onclick="showSection('history')">History</button>
+  <button class="tab-btn" onclick="showSection('sms')">📱 SMS Sync</button>
+  <button class="tab-btn" onclick="showSection('insights')">Insights</button>
+  <button class="tab-btn" onclick="showSection('ai')">AI Chat</button>
+  <button class="tab-btn" onclick="showSection('settings')">Settings</button>
+</div>
+
+<!-- ══ ADD ══ -->
+<div class="section active" id="sec-add">
+  <div class="form-card">
+    <div class="form-title">New Transaction</div>
+    <div class="type-toggle">
+      <button class="type-btn income active" id="btnIncome" onclick="setType('income')">↑ Income</button>
+      <button class="type-btn expense" id="btnExpense" onclick="setType('expense')">↓ Expense</button>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Description</label>
+      <input class="form-input" id="txDesc" placeholder="e.g. Freelance payment" />
+    </div>
+    <div class="form-group">
+      <label class="form-label">Amount (KES)</label>
+      <div class="input-prefix">
+        <span class="prefix-label">KES</span>
+        <input class="form-input" id="txAmount" type="number" placeholder="0.00" min="0" />
+      </div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Category</label>
+      <select class="form-select" id="txCategory">
+        <option value="Salary">💼 Salary</option>
+        <option value="Freelance">💻 Freelance</option>
+        <option value="Business">🏪 Business</option>
+        <option value="Investment">📈 Investment</option>
+        <option value="Gift">🎁 Gift</option>
+        <option value="Food">🍽️ Food & Dining</option>
+        <option value="Transport">🚌 Transport</option>
+        <option value="Rent">🏠 Rent</option>
+        <option value="Utilities">💡 Utilities</option>
+        <option value="Shopping">🛍️ Shopping</option>
+        <option value="Health">💊 Health</option>
+        <option value="Education">📚 Education</option>
+        <option value="Airtime">📱 Airtime & Data</option>
+        <option value="Entertainment">🎉 Entertainment</option>
+        <option value="Savings">💰 Savings</option>
+        <option value="Other">📌 Other</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Date</label>
+      <input class="form-input" id="txDate" type="date" />
+    </div>
+    <button class="btn-primary" onclick="addTransaction()">Save Transaction</button>
+  </div>
+</div>
+
+<!-- ══ HISTORY ══ -->
+<div class="section" id="sec-history">
+  <span class="section-title">All Transactions</span>
+  <div class="tx-list" id="txList">
+    <div class="empty-state"><div class="empty-icon">📭</div><div class="empty-text">No transactions yet.</div></div>
+  </div>
+</div>
+
+<!-- ══ SMS SYNC ══ -->
+<div class="section" id="sec-sms">
+
+  <!-- PROVIDER SELECT -->
+  <div class="sms-card">
+    <div class="sms-card-title">Select Your Network / Wallet</div>
+    <div class="provider-grid">
+      <button class="provider-card" id="card-mpesa" onclick="selectProvider('mpesa')">
+        <div class="provider-logo">🟢</div>
+        <div class="provider-name mpesa">M-PESA</div>
+        <div class="provider-sub">Safaricom</div>
+      </button>
+      <button class="provider-card" id="card-airtel" onclick="selectProvider('airtel')">
+        <div class="provider-logo">🔴</div>
+        <div class="provider-name airtel">Airtel Money</div>
+        <div class="provider-sub">Airtel Kenya</div>
+      </button>
+    </div>
+    <div id="providerNote" class="info-box" style="display:none"></div>
+  </div>
+
+  <!-- HOW TO GET SMS -->
+  <div class="sms-card" id="howToCard" style="display:none">
+    <div class="sms-card-title">How to Copy Your SMS</div>
+    <div class="info-box">
+      <b>⚠️ Note:</b> Web browsers cannot directly read your SMS inbox for privacy/security reasons.
+      To sync, copy your M-Pesa or Airtel Money messages and paste them below.<br><br>
+      <b>On Android:</b>
+      <ol class="step-list" style="margin-top:6px">
+        <li>Open your <b>Messages</b> app</li>
+        <li>Find messages from <b id="senderHint">MPESA</b></li>
+        <li>Long-press a message → <b>Select All</b> in that conversation</li>
+        <li>Tap <b>Copy</b> then paste below</li>
+        <li>Repeat for as many messages as you want</li>
+      </ol>
+    </div>
+  </div>
+
+  <!-- PASTE & PARSE -->
+  <div class="sms-card" id="pasteCard" style="display:none">
+    <div class="sms-card-title" id="pasteTitle">Paste M-PESA SMS</div>
+    <textarea class="paste-area" id="smsInput" placeholder="Paste your SMS messages here (you can paste multiple at once)…"></textarea>
+    <div style="display:flex;gap:8px;margin-top:10px">
+      <button class="btn-primary" onclick="parseSMS()" style="flex:1">Parse & Import</button>
+      <button class="btn-secondary" onclick="document.getElementById('smsInput').value='';clearLog()">Clear</button>
+    </div>
+  </div>
+
+  <!-- DEMO / TEST -->
+  <div class="sms-card" id="demoCard" style="display:none">
+    <div class="sms-card-title">Test with Sample SMS</div>
+    <button class="btn-secondary" onclick="loadDemo()" style="width:100%">Load Sample Messages</button>
+  </div>
+
+  <!-- PARSE LOG -->
+  <div class="sms-card" id="logCard" style="display:none">
+    <div class="sms-card-title">Import Log</div>
+    <div class="sms-log" id="smsLog"></div>
+    <div style="margin-top:10px;font-size:0.75rem;color:var(--muted);font-family:var(--mono)" id="logSummary"></div>
+  </div>
+
+</div>
+
+<!-- ══ INSIGHTS ══ -->
+<div class="section" id="sec-insights">
+  <div class="chart-wrap">
+    <div class="chart-title">Income vs Expenses – Last 7 Days</div>
+    <canvas id="lineChart" height="160"></canvas>
+  </div>
+  <span class="section-title">Spending by Category</span>
+  <div class="category-grid" id="categoryGrid">
+    <div style="grid-column:1/-1;text-align:center;color:var(--muted);font-size:0.83rem;padding:18px 0">No expense data yet.</div>
+  </div>
+</div>
+
+<!-- ══ AI CHAT ══ -->
+<div class="section" id="sec-ai">
+  <div class="quick-prompts">
+    <button class="quick-btn" onclick="quickPrompt('Analyze my spending habits')">📊 Habits</button>
+    <button class="quick-btn" onclick="quickPrompt('How can I save more money?')">💡 Save tips</button>
+    <button class="quick-btn" onclick="quickPrompt('Am I overspending on any category?')">⚠️ Overspend?</button>
+    <button class="quick-btn" onclick="quickPrompt('Give me a budget plan for next month')">📅 Budget plan</button>
+    <button class="quick-btn" onclick="quickPrompt('What is my biggest expense this month?')">🔍 Top expense</button>
+  </div>
+  <div class="ai-chat">
+    <div class="ai-header"><div class="ai-dot"></div><div class="ai-title">AI Financial Advisor</div></div>
+    <div class="ai-messages" id="aiMessages">
+      <div class="msg assistant">👋 Hi! I'm your AI financial advisor. Once you sync your M-Pesa or Airtel Money SMS, I'll give you personalized insights and savings tips based on your real spending data.</div>
+    </div>
+    <div class="ai-input-row">
+      <input class="ai-input" id="aiInput" placeholder="Ask about your finances…" onkeydown="if(event.key==='Enter')sendAI()" />
+      <button class="ai-send" id="aiSend" onclick="sendAI()">Send</button>
+    </div>
+  </div>
+  <div class="form-card">
+    <div class="form-title">Anthropic API Key</div>
+    <div class="form-group">
+      <label class="form-label">API Key</label>
+      <input class="form-input" id="apiKeyInput" type="password" placeholder="sk-ant-…" />
+    </div>
+    <button class="btn-primary" onclick="saveApiKey()">Save Key</button>
+  </div>
+</div>
+
+<!-- ══ SETTINGS ══ -->
+<div class="section" id="sec-settings">
+  <div class="settings-section">
+    <div class="settings-title">Budget</div>
+    <div class="form-group">
+      <label class="form-label">Monthly Budget (KES)</label>
+      <div class="input-prefix">
+        <span class="prefix-label">KES</span>
+        <input class="form-input" id="budgetInput" type="number" placeholder="50000" />
+      </div>
+    </div>
+    <button class="btn-primary mt8" onclick="saveBudget()">Set Budget</button>
+  </div>
+  <div class="settings-section">
+    <div class="settings-title">SIM / Wallet</div>
+    <div class="settings-row">
+      <span class="settings-row-label">Active Provider</span>
+      <span class="settings-row-value" id="activeProviderLabel">Not set</span>
+    </div>
+    <div class="settings-row">
+      <span class="settings-row-label">Last Sync</span>
+      <span class="settings-row-value" id="lastSyncLabel">Never</span>
+    </div>
+    <button class="btn-secondary mt8" onclick="showSection('sms');setNav(document.querySelectorAll('.nav-item')[2])">Go to SMS Sync</button>
+  </div>
+  <div class="settings-section">
+    <div class="settings-title">About</div>
+    <div class="settings-row"><span class="settings-row-label">App</span><span class="settings-row-value">MoneyMind v2.1</span></div>
+    <div class="settings-row"><span class="settings-row-label">Currency</span><span class="settings-row-value">KES</span></div>
+    <div class="settings-row"><span class="settings-row-label">Data Storage</span><span class="settings-row-value">Local device</span></div>
+  </div>
+  <div class="settings-section">
+    <div class="settings-title">Data</div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <button class="btn-secondary" onclick="exportData()">Export JSON</button>
+      <button class="btn-danger" onclick="clearData()">Clear All Data</button>
+    </div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<!-- BOTTOM NAV -->
+<div class="bottom-nav">
+  <button class="nav-item active" onclick="showSection('add');setNav(this)"><span class="nav-icon">➕</span>Add</button>
+  <button class="nav-item" onclick="showSection('history');setNav(this)"><span class="nav-icon">📋</span>History</button>
+  <button class="nav-item" onclick="showSection('sms');setNav(this)"><span class="nav-icon">📱</span>SMS</button>
+  <button class="nav-item" onclick="showSection('insights');setNav(this)"><span class="nav-icon">📊</span>Insights</button>
+  <button class="nav-item" onclick="showSection('ai');setNav(this)"><span class="nav-icon">🤖</span>AI</button>
+  <button class="nav-item" onclick="showSection('settings');setNav(this)"><span class="nav-icon">⚙️</span>Settings</button>
+</div>
+
+<script>
+// ════════════════════════════════════════
+//  STATE
+// ════════════════════════════════════════
+let txType = 'income';
+let transactions = JSON.parse(localStorage.getItem('mm_txs') || '[]');
+let budget = parseFloat(localStorage.getItem('mm_budget') || '0');
+let apiKey = localStorage.getItem('mm_apikey') || '';
+let aiHistory = [];
+let activeProvider = localStorage.getItem('mm_provider') || null; // 'mpesa' | 'airtel'
+let lastSync = localStorage.getItem('mm_lastsync') || null;
+let importedIds = new Set(JSON.parse(localStorage.getItem('mm_importedIds') || '[]'));
+
+const CATS = {
+  Food:'🍽️',Transport:'🚌',Rent:'🏠',Utilities:'💡',Shopping:'🛍️',
+  Health:'💊',Education:'📚',Airtime:'📱',Entertainment:'🎉',Savings:'💰',
+  Salary:'💼',Freelance:'💻',Business:'🏪',Investment:'📈',Gift:'🎁',Other:'📌'
+};
+
+// ════════════════════════════════════════
+//  INIT
+// ════════════════════════════════════════
+document.getElementById('txDate').value = new Date().toISOString().split('T')[0];
+document.getElementById('currentMonth').textContent = new Date().toLocaleDateString('en-KE',{month:'long',year:'numeric'});
+if (apiKey) document.getElementById('apiKeyInput').value = apiKey;
+if (budget) document.getElementById('budgetInput').value = budget;
+if (activeProvider) { selectProvider(activeProvider, true); }
+updateSyncBanner();
+updateAll();
+
+// ════════════════════════════════════════
+//  NAVIGATION
+// ════════════════════════════════════════
+function showSection(id) {
+  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+  document.getElementById('sec-'+id).classList.add('active');
+  const ids = ['add','history','sms','insights','ai','settings'];
+  document.querySelectorAll('.tab-btn').forEach((b,i) => b.classList.toggle('active', ids[i]===id));
+  if (id==='insights') renderInsights();
+}
+function setNav(el) {
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  el.classList.add('active');
+}
+
+// ════════════════════════════════════════
+//  PROVIDER SELECTION
+// ════════════════════════════════════════
+function selectProvider(p, silent=false) {
+  activeProvider = p;
+  localStorage.setItem('mm_provider', p);
+
+  document.querySelectorAll('.provider-card').forEach(c => c.classList.remove('selected'));
+  document.getElementById('card-'+p).classList.add('selected',p);
+
+  const note = document.getElementById('providerNote');
+  note.style.display = 'block';
+
+  if (p === 'mpesa') {
+    note.innerHTML = `<b>✅ M-PESA (Safaricom)</b> selected.<br>SMS sender: <b>MPESA</b> — MoneyMind will look for messages from <b>MPESA</b> in your inbox.`;
+    document.getElementById('senderHint').textContent = 'MPESA';
+    document.getElementById('pasteTitle').textContent = 'Paste M-PESA SMS';
+    document.getElementById('smsInput').placeholder = 'Paste M-PESA SMS messages here…\n\nExample:\nQABC123DEF Confirmed. Ksh500.00 sent to JOHN DOE 0712345678 on 14/6/24 at 10:30 AM. New M-PESA balance is Ksh1,200.00.';
+  } else {
+    note.innerHTML = `<b>✅ Airtel Money</b> selected.<br>SMS sender: <b>AIRTELMONEY</b> — MoneyMind will look for messages from <b>AIRTELMONEY</b> in your inbox.`;
+    document.getElementById('senderHint').textContent = 'AIRTELMONEY';
+    document.getElementById('pasteTitle').textContent = 'Paste Airtel Money SMS';
+    document.getElementById('smsInput').placeholder = 'Paste Airtel Money SMS messages here…\n\nExample:\nTxn ID:AM123456. You have sent KES 500 to JANE DOE(0733456789). Your Airtel Money balance is KES 800.00.';
+  }
+
+  document.getElementById('howToCard').style.display = 'block';
+  document.getElementById('pasteCard').style.display = 'block';
+  document.getElementById('demoCard').style.display = 'block';
+
+  updateSyncBanner();
+  if (!silent) showToast(p==='mpesa' ? 'M-PESA selected ✓' : 'Airtel Money selected ✓', 'success');
+}
+
+function updateSyncBanner() {
+  const badge = document.getElementById('simBadge');
+  const status = document.getElementById('syncStatus');
+  const provLabel = document.getElementById('activeProviderLabel');
+  const lastLabel = document.getElementById('lastSyncLabel');
+
+  if (activeProvider === 'mpesa') {
+    badge.textContent = 'M-PESA'; badge.className = 'sim-badge mpesa';
+    provLabel.textContent = 'M-PESA (Safaricom)';
+  } else if (activeProvider === 'airtel') {
+    badge.textContent = 'Airtel Money'; badge.className = 'sim-badge airtel';
+    provLabel.textContent = 'Airtel Money';
+  } else {
+    badge.textContent = 'No SIM'; badge.className = 'sim-badge unknown';
+    provLabel.textContent = 'Not set';
+  }
+
+  const smsCount = transactions.filter(t=>t.source==='mpesa'||t.source==='airtel').length;
+  status.textContent = lastSync
+    ? `Last synced ${new Date(lastSync).toLocaleDateString('en-KE',{month:'short',day:'numeric'})} · ${smsCount} SMS txs`
+    : (smsCount > 0 ? `${smsCount} SMS txs imported` : 'Not synced');
+  lastLabel.textContent = lastSync ? new Date(lastSync).toLocaleString('en-KE') : 'Never';
+}
+
+// ════════════════════════════════════════
+//  SMS PARSERS
+// ════════════════════════════════════════
+
+/* ── M-PESA PATTERNS ──
+   Safaricom sends from "MPESA"
+   Transaction types detected:
+   1. Send money       → expense   "Ksh X sent to NAME"
+   2. Receive money    → income    "You have received Ksh X from NAME"
+   3. Pay bill/lipa    → expense   "Ksh X paid to PAYBILL/TILL"
+   4. Buy goods        → expense   "Ksh X paid to TILL NUMBER"
+   5. Withdraw         → expense   "Ksh X withdrawn from agent"
+   6. Deposit          → income    "Ksh X deposited"
+   7. Airtime          → expense   "You bought Ksh X of airtime"
+*/
+function parseMpesaSMS(text) {
+  const results = [];
+  // Split into individual messages by common delimiters
+  const msgs = splitMessages(text);
+
+  msgs.forEach(msg => {
+    msg = msg.trim();
+    if (!msg) return;
+
+    // Extract transaction code (e.g. QAB1234XYZ)
+    const codeMatch = msg.match(/\b([A-Z0-9]{10})\b/);
+    const code = codeMatch ? codeMatch[1] : null;
+
+    // Extract date/time
+    const dateMatch = msg.match(/(\d{1,2}\/\d{1,2}\/\d{2,4})/);
+    const timeMatch = msg.match(/(\d{1,2}:\d{2}\s*[AP]M)/i);
+    const date = dateMatch ? parseDateStr(dateMatch[1]) : new Date().toISOString().split('T')[0];
+
+    // Amount: Ksh X,XXX.XX or KSh X,XXX
+    const amtMatch = msg.match(/[Kk][Ss][Hh]\.?\s*([\d,]+(?:\.\d{1,2})?)/);
+    const amount = amtMatch ? parseFloat(amtMatch[1].replace(/,/g,'')) : null;
+    if (!amount || amount <= 0) return;
+
+    // Balance extraction
+    const balMatch = msg.match(/balance\s+is\s+[Kk][Ss][Hh]\.?\s*([\d,]+(?:\.\d{1,2})?)/i);
+
+    let type, cat, desc;
+    const lc = msg.toLowerCase();
+
+    // Receive money
+    if (lc.includes('you have received') || lc.includes('received ksh')) {
+      type = 'income'; cat = 'Other';
+      const fromMatch = msg.match(/from\s+([A-Z\s]+?)(?:\s+\d{10}|\s+on\s)/i);
+      desc = fromMatch ? `M-PESA received from ${titleCase(fromMatch[1].trim())}` : 'M-PESA received';
+
+    // Deposit
+    } else if (lc.includes('deposited')) {
+      type = 'income'; cat = 'Other';
+      desc = 'M-PESA deposit';
+
+    // Reversal
+    } else if (lc.includes('reversal') || lc.includes('reversed')) {
+      type = 'income'; cat = 'Other';
+      desc = 'M-PESA reversal received';
+
+    // Airtime purchase
+    } else if (lc.includes('airtime') && (lc.includes('bought') || lc.includes('purchase'))) {
+      type = 'expense'; cat = 'Airtime';
+      desc = 'M-PESA airtime purchase';
+
+    // Send money
+    } else if (lc.includes('sent to') || lc.includes('you sent')) {
+      type = 'expense'; cat = 'Other';
+      const toMatch = msg.match(/sent to\s+([A-Z\s]+?)(?:\s+\d{10}|\s+on\s)/i);
+      desc = toMatch ? `M-PESA sent to ${titleCase(toMatch[1].trim())}` : 'M-PESA sent';
+
+    // Pay bill
+    } else if (lc.includes('pay bill') || lc.includes('paybill') || lc.includes('account number')) {
+      type = 'expense'; cat = 'Utilities';
+      const billMatch = msg.match(/to\s+([A-Z0-9\s]+?)\s+account/i);
+      desc = billMatch ? `M-PESA paybill – ${titleCase(billMatch[1].trim())}` : 'M-PESA paybill payment';
+
+    // Buy goods / Lipa na M-PESA
+    } else if (lc.includes('buy goods') || lc.includes('lipa na') || lc.includes('till number')) {
+      type = 'expense'; cat = 'Shopping';
+      const tillMatch = msg.match(/till\s+(?:number\s+)?(\d+)/i);
+      desc = tillMatch ? `M-PESA goods – Till ${tillMatch[1]}` : 'M-PESA buy goods';
+
+    // Withdraw
+    } else if (lc.includes('withdrawn') || lc.includes('withdraw')) {
+      type = 'expense'; cat = 'Other';
+      desc = 'M-PESA withdrawal';
+
+    // Confirmed (generic send/payment)
+    } else if (lc.includes('confirmed') && (lc.includes('sent') || lc.includes('paid'))) {
+      type = 'expense'; cat = 'Other';
+      desc = code ? `M-PESA payment (${code})` : 'M-PESA payment';
+
+    } else {
+      return; // unrecognised, skip
+    }
+
+    // Deduplicate by code+amount
+    const uid = (code || '') + '_' + amount + '_' + date;
+    if (importedIds.has(uid)) return;
+
+    results.push({ type, amount, cat, desc, date, source:'mpesa', code, uid });
+  });
+
+  return results;
+}
+
+/* ── AIRTEL MONEY PATTERNS ──
+   Airtel sends from "AIRTELMONEY"
+   Transaction types:
+   1. Send money   → expense "You have sent KES X to NAME(0712…)"
+   2. Receive      → income  "You have received KES X from NAME"
+   3. Payment      → expense "Payment of KES X to MERCHANT"
+   4. Withdraw     → expense "Withdrawal of KES X"
+   5. Deposit      → income  "Deposit of KES X"
+   6. Airtime      → expense "Airtime purchase of KES X"
+*/
+function parseAirtelSMS(text) {
+  const results = [];
+  const msgs = splitMessages(text);
+
+  msgs.forEach(msg => {
+    msg = msg.trim();
+    if (!msg) return;
+
+    // Airtel Money messages usually don't have MPESA-style codes; use Txn ID
+    const codeMatch = msg.match(/Txn\s*ID[:\s]*([A-Z0-9]+)/i);
+    const code = codeMatch ? codeMatch[1] : null;
+
+    // Date
+    const dateMatch = msg.match(/(\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4})/);
+    const date = dateMatch ? parseDateStr(dateMatch[1]) : new Date().toISOString().split('T')[0];
+
+    // Amount: KES X,XXX or Ksh X
+    const amtMatch = msg.match(/KES\s*([\d,]+(?:\.\d{1,2})?)/i);
+    const amount = amtMatch ? parseFloat(amtMatch[1].replace(/,/g,'')) : null;
+    if (!amount || amount <= 0) return;
+
+    let type, cat, desc;
+    const lc = msg.toLowerCase();
+
+    // Received
+    if (lc.includes('you have received') || lc.includes('received kes')) {
+      type = 'income'; cat = 'Other';
+      const fromMatch = msg.match(/from\s+([A-Z\s]+?)(?:\(|\s+on\s|\.)/i);
+      desc = fromMatch ? `Airtel Money received from ${titleCase(fromMatch[1].trim())}` : 'Airtel Money received';
+
+    // Deposit
+    } else if (lc.includes('deposit')) {
+      type = 'income'; cat = 'Other';
+      desc = 'Airtel Money deposit';
+
+    // Airtime
+    } else if (lc.includes('airtime')) {
+      type = 'expense'; cat = 'Airtime';
+      desc = 'Airtel Money airtime purchase';
+
+    // Send money
+    } else if (lc.includes('you have sent') || lc.includes('sent kes')) {
+      type = 'expense'; cat = 'Other';
+      const toMatch = msg.match(/sent\s+KES\s+[\d,\.]+\s+to\s+([A-Z\s]+?)(?:\(|\s*\.)/i);
+      desc = toMatch ? `Airtel Money sent to ${titleCase(toMatch[1].trim())}` : 'Airtel Money sent';
+
+    // Payment / merchant
+    } else if (lc.includes('payment') || lc.includes('paid to')) {
+      type = 'expense'; cat = 'Shopping';
+      const merMatch = msg.match(/(?:payment\s+to|paid\s+to)\s+([A-Z0-9\s]+?)(?:\.|,|$)/i);
+      desc = merMatch ? `Airtel Money payment to ${titleCase(merMatch[1].trim())}` : 'Airtel Money payment';
+
+    // Withdrawal
+    } else if (lc.includes('withdrawal') || lc.includes('withdrawn')) {
+      type = 'expense'; cat = 'Other';
+      desc = 'Airtel Money withdrawal';
+
+    } else {
+      return;
+    }
+
+    const uid = 'airtel_' + (code||'') + '_' + amount + '_' + date;
+    if (importedIds.has(uid)) return;
+
+    results.push({ type, amount, cat, desc, date, source:'airtel', code, uid });
+  });
+
+  return results;
+}
+
+// Split a pasted blob into individual SMS messages
+function splitMessages(text) {
+  // Try splitting by transaction code pattern or double newline
+  let parts = text.split(/\n{2,}/);
+  if (parts.length === 1) {
+    // Try splitting at the start of a new transaction line
+    parts = text.split(/(?=(?:[A-Z]{4}\d{6,}|Txn\s*ID|You have|Confirmed\.|QA|QB|QC|QD|QE|QF|QG|QH|QI|QJ|QK|QL|QM|QN|QO|QP|QR|QS|QT|QU|QV|QW|QX|QY|QZ))/);
+  }
+  return parts.filter(p => p.trim().length > 20);
+}
+
+function parseDateStr(str) {
+  // Handles DD/MM/YY, DD/MM/YYYY, DD-MM-YYYY
+  const parts = str.split(/[\/\-]/);
+  if (parts.length !== 3) return new Date().toISOString().split('T')[0];
+  let [d, m, y] = parts.map(Number);
+  if (y < 100) y += 2000;
+  // ISO
+  return `${y}-${String(m).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+}
+
+function titleCase(s) {
+  return s.toLowerCase().split(' ').map(w => w.charAt(0).toUpperCase()+w.slice(1)).join(' ');
+}
+
+// ════════════════════════════════════════
+//  PARSE & IMPORT
+// ════════════════════════════════════════
+function parseSMS() {
+  if (!activeProvider) { showToast('Select a provider first', 'error'); return; }
+  const text = document.getElementById('smsInput').value.trim();
+  if (!text) { showToast('Paste some SMS messages first', 'error'); return; }
+
+  const parsed = activeProvider === 'mpesa' ? parseMpesaSMS(text) : parseAirtelSMS(text);
+
+  const logEl = document.getElementById('smsLog');
+  const logCard = document.getElementById('logCard');
+  logCard.style.display = 'block';
+  logEl.innerHTML = '';
+
+  if (!parsed.length) {
+    logLine('⚠ No valid transactions found. Make sure you pasted the right SMS.', 'log-skip');
+    document.getElementById('logSummary').textContent = '';
+    return;
+  }
+
+  let imported = 0, skipped = 0;
+  parsed.forEach(tx => {
+    if (importedIds.has(tx.uid)) {
+      logLine(`⟳ Skipped duplicate: ${tx.desc} – KES ${fmt(tx.amount)}`, 'log-skip');
+      skipped++;
+      return;
+    }
+    const newTx = {
+      id: Date.now() + Math.random(),
+      type: tx.type, desc: tx.desc, amount: tx.amount,
+      cat: tx.cat, date: tx.date, source: tx.source
+    };
+    transactions.unshift(newTx);
+    importedIds.add(tx.uid);
+    logLine(`${tx.type==='income'?'↑':'↓'} ${tx.desc} – KES ${fmt(tx.amount)} (${tx.date})`,
+            tx.type==='income'?'log-ok':'log-exp');
+    imported++;
+  });
+
+  // Save
+  save();
+  localStorage.setItem('mm_importedIds', JSON.stringify([...importedIds]));
+  lastSync = new Date().toISOString();
+  localStorage.setItem('mm_lastsync', lastSync);
+  updateAll();
+  updateSyncBanner();
+
+  document.getElementById('logSummary').textContent =
+    `✓ ${imported} imported · ${skipped} duplicates skipped`;
+  showToast(`${imported} transactions imported`, 'success');
+}
+
+function logLine(text, cls) {
+  const logEl = document.getElementById('smsLog');
+  const span = document.createElement('div');
+  span.className = cls;
+  span.textContent = text;
+  logEl.appendChild(span);
+  logEl.scrollTop = logEl.scrollHeight;
+}
+
+function clearLog() {
+  document.getElementById('logCard').style.display = 'none';
+  document.getElementById('smsLog').innerHTML = '';
+  document.getElementById('logSummary').textContent = '';
+}
+
+// ════════════════════════════════════════
+//  DEMO DATA
+// ════════════════════════════════════════
+function loadDemo() {
+  const demos = {
+    mpesa: `QAB1234XYZW Confirmed. Ksh2,500.00 sent to JOHN DOE 0712345678 on 14/6/24 at 10:30 AM. New M-PESA balance is Ksh8,500.00. Transaction cost, Ksh0.00.
+
+QBC2345YYZX Confirmed. You have received Ksh5,000.00 from FREELANCE CLIENT 0722987654 on 13/6/24 at 2:15 PM. New M-PESA balance is Ksh11,000.00.
+
+QCD3456ZZAB Confirmed. Ksh1,200.00 paid to KPLC PREPAID 123456 on 12/6/24 at 9:00 AM. New M-PESA balance is Ksh9,800.00.
+
+QDE4567AABB Confirmed.Ksh850.00 paid to Till Number 5678901 JAVA HOUSE on 11/6/24 at 1:45 PM. New M-PESA balance is Ksh8,950.00.
+
+QEF5678BBCC You bought Ksh100.00 of airtime on 10/6/24 at 8:30 AM. New M-PESA balance is Ksh8,850.00.
+
+QFG6789CCDD Confirmed. Ksh3,000.00 withdrawn from Agent 654321 JOHN AGENT on 9/6/24 at 11:00 AM. New M-PESA balance is Ksh5,850.00.`,
+
+    airtel: `Txn ID:AM789012. You have sent KES 1,500 to MARY WANJIKU(0733456789). Your Airtel Money balance is KES 3,200.00. Date: 14/06/2024
+
+Txn ID:AM789013. You have received KES 8,000 from EMPLOYER LTD(0711234567). Your Airtel Money balance is KES 11,200.00. Date: 13/06/2024
+
+Txn ID:AM789014. Payment of KES 2,000 to NAIROBI WATER has been completed. Your Airtel Money balance is KES 9,200.00. Date: 12/06/2024
+
+Txn ID:AM789015. Airtime purchase of KES 200 successful. Your Airtel Money balance is KES 9,000.00. Date: 11/06/2024
+
+Txn ID:AM789016. Withdrawal of KES 4,000 at agent PETER NJOROGE. Your Airtel Money balance is KES 5,000.00. Date: 10/06/2024`
+  };
+
+  const demo = demos[activeProvider] || demos.mpesa;
+  document.getElementById('smsInput').value = demo;
+  showToast('Sample SMS loaded – click Parse & Import', 'success');
+}
+
+// ════════════════════════════════════════
+//  ADD MANUAL TX
+// ════════════════════════════════════════
+function setType(t) {
+  txType = t;
+  document.getElementById('btnIncome').classList.toggle('active', t==='income');
+  document.getElementById('btnExpense').classList.toggle('active', t==='expense');
+  document.getElementById('txCategory').value = t==='income' ? 'Salary' : 'Food';
+}
+
+function addTransaction() {
+  const desc = document.getElementById('txDesc').value.trim();
+  const amount = parseFloat(document.getElementById('txAmount').value);
+  const cat = document.getElementById('txCategory').value;
+  const date = document.getElementById('txDate').value;
+  if (!desc) { showToast('Add a description', 'error'); return; }
+  if (!amount || amount <= 0) { showToast('Enter a valid amount', 'error'); return; }
+  transactions.unshift({ id:Date.now(), type:txType, desc, amount, cat, date, source:'manual' });
+  save(); updateAll();
+  document.getElementById('txDesc').value = '';
+  document.getElementById('txAmount').value = '';
+  showToast(txType==='income' ? '↑ Income added' : '↓ Expense added', 'success');
+}
+
+function deleteTransaction(id) {
+  transactions = transactions.filter(t => t.id !== id);
+  save(); updateAll();
+  showToast('Deleted', '');
+}
+
+function save() { localStorage.setItem('mm_txs', JSON.stringify(transactions)); }
+
+// ════════════════════════════════════════
+//  UPDATE UI
+// ════════════════════════════════════════
+function updateAll() {
+  const now = new Date();
+  const m = now.getMonth(), y = now.getFullYear();
+  const monthly = transactions.filter(t => {
+    const d = new Date(t.date); return d.getMonth()===m && d.getFullYear()===y;
+  });
+  const income  = monthly.filter(t=>t.type==='income').reduce((s,t)=>s+t.amount,0);
+  const expense = monthly.filter(t=>t.type==='expense').reduce((s,t)=>s+t.amount,0);
+  const balance = income - expense;
+
+  const hero = document.getElementById('heroBalance');
+  hero.textContent = 'KES '+fmt(Math.abs(balance));
+  hero.className = 'hero-balance'+(balance<0?' negative':'');
+  document.getElementById('heroSub').textContent = balance >= 0
+    ? `You're in the green this month 🟢`
+    : `Expenses exceed income by KES ${fmt(Math.abs(balance))} ⚠️`;
+  document.getElementById('totalIncome').textContent  = 'KES '+fmt(income);
+  document.getElementById('totalExpense').textContent = 'KES '+fmt(expense);
+
+  if (budget > 0) {
+    const pct = Math.min((expense/budget)*100, 100);
+    const bar = document.getElementById('budgetBar');
+    bar.style.width = pct+'%';
+    bar.className = 'bar-fill'+(pct>=90?' danger':pct>=70?' warning':'');
+    document.getElementById('barPct').textContent = Math.round(pct)+'%';
+  }
+  renderHistory();
+}
+
+// ════════════════════════════════════════
+//  HISTORY
+// ════════════════════════════════════════
+function renderHistory() {
+  const list = document.getElementById('txList');
+  if (!transactions.length) {
+    list.innerHTML = '<div class="empty-state"><div class="empty-icon">📭</div><div class="empty-text">No transactions yet.</div></div>';
+    return;
+  }
+  list.innerHTML = transactions.map(t => {
+    const srcLabel = t.source==='mpesa' ? '<span class="tx-source mpesa">M-PESA</span>'
+                   : t.source==='airtel'? '<span class="tx-source airtel">Airtel</span>'
+                   : '<span class="tx-source manual">manual</span>';
+    return `
+    <div class="tx-item">
+      <div class="tx-icon ${t.type}">${CATS[t.cat]||'📌'}</div>
+      <div class="tx-info">
+        <div class="tx-desc">${esc(t.desc)}</div>
+        <div class="tx-meta">${t.cat} · ${fmtDate(t.date)} ${srcLabel}</div>
+      </div>
+      <div class="tx-amount ${t.type}">${t.type==='income'?'+':'-'}KES ${fmt(t.amount)}</div>
+      <button class="tx-delete" onclick="deleteTransaction(${t.id})">✕</button>
+    </div>`;
+  }).join('');
+}
+
+// ════════════════════════════════════════
+//  INSIGHTS
+// ════════════════════════════════════════
+function renderInsights() { renderLineChart(); renderCategories(); }
+
+function renderLineChart() {
+  const canvas = document.getElementById('lineChart');
+  const ctx = canvas.getContext('2d');
+  const W = canvas.offsetWidth || 320;
+  canvas.width = W * devicePixelRatio;
+  canvas.height = 160 * devicePixelRatio;
+  ctx.scale(devicePixelRatio, devicePixelRatio);
+  const cw = W, ch = 160;
+  const days = [];
+  for (let i=6;i>=0;i--) { const d=new Date(); d.setDate(d.getDate()-i); days.push(d.toISOString().split('T')[0]); }
+  const iData = days.map(d=>transactions.filter(t=>t.type==='income'&&t.date===d).reduce((s,t)=>s+t.amount,0));
+  const eData = days.map(d=>transactions.filter(t=>t.type==='expense'&&t.date===d).reduce((s,t)=>s+t.amount,0));
+  const maxV = Math.max(...iData,...eData,1);
+  const pad = {l:10,r:10,t:16,b:30};
+  const gw = cw-pad.l-pad.r, gh = ch-pad.t-pad.b;
+  ctx.clearRect(0,0,cw,ch);
+  ctx.strokeStyle='#243547'; ctx.lineWidth=1;
+  [0,.25,.5,.75,1].forEach(f=>{const y=pad.t+gh*(1-f);ctx.beginPath();ctx.moveTo(pad.l,y);ctx.lineTo(cw-pad.r,y);ctx.stroke();});
+  function drawLine(data,color){
+    ctx.beginPath();ctx.strokeStyle=color;ctx.lineWidth=2.5;
+    data.forEach((v,i)=>{const x=pad.l+i*(gw/(data.length-1));const y=pad.t+gh*(1-v/maxV);i===0?ctx.moveTo(x,y):ctx.lineTo(x,y);});
+    ctx.stroke();
+    data.forEach((v,i)=>{const x=pad.l+i*(gw/(data.length-1));const y=pad.t+gh*(1-v/maxV);ctx.beginPath();ctx.fillStyle=color;ctx.arc(x,y,3.5,0,Math.PI*2);ctx.fill();});
+  }
+  drawLine(iData,'#00E5A0'); drawLine(eData,'#FF5A5A');
+  ctx.fillStyle='#6B8BA4';ctx.font=`10px 'Space Mono',monospace`;ctx.textAlign='center';
+  days.forEach((d,i)=>{const x=pad.l+i*(gw/(days.length-1));ctx.fillText(d.slice(5).replace('-','/'),x,ch-6);});
+  ctx.fillStyle='#00E5A0';ctx.fillRect(gw/2-30,2,10,8);
+  ctx.fillStyle='#E8F0F7';ctx.font=`9px 'Space Mono',monospace`;ctx.textAlign='left';ctx.fillText('Income',gw/2-16,10);
+  ctx.fillStyle='#FF5A5A';ctx.fillRect(gw/2+30,2,10,8);ctx.fillStyle='#E8F0F7';ctx.fillText('Expense',gw/2+44,10);
+}
+
+function renderCategories() {
+  const now = new Date();
+  const expenses = transactions.filter(t=>{const d=new Date(t.date);return t.type==='expense'&&d.getMonth()===now.getMonth()&&d.getFullYear()===now.getFullYear();});
+  const catT = {};
+  expenses.forEach(t=>catT[t.cat]=(catT[t.cat]||0)+t.amount);
+  const sorted = Object.entries(catT).sort((a,b)=>b[1]-a[1]);
+  const total = sorted.reduce((s,[,v])=>s+v,0)||1;
+  const grid = document.getElementById('categoryGrid');
+  if (!sorted.length){grid.innerHTML='<div style="grid-column:1/-1;text-align:center;color:var(--muted);font-size:0.83rem;padding:18px 0">No expense data this month.</div>';return;}
+  grid.innerHTML = sorted.slice(0,8).map(([cat,val])=>`
+    <div class="cat-card">
+      <div class="cat-icon">${CATS[cat]||'📌'}</div>
+      <div class="cat-name">${cat}</div>
+      <div class="cat-amount">KES ${fmt(val)}</div>
+      <div class="cat-bar-wrap"><div class="cat-bar" style="width:${Math.round(val/total*100)}%"></div></div>
+    </div>`).join('');
+}
+
+// ════════════════════════════════════════
+//  AI CHAT
+// ════════════════════════════════════════
+function quickPrompt(txt) { document.getElementById('aiInput').value=txt; sendAI(); }
+
+async function sendAI() {
+  const input = document.getElementById('aiInput');
+  const msg = input.value.trim();
+  if (!msg) return;
+  const key = localStorage.getItem('mm_apikey');
+  if (!key) { showToast('Save your API key first','error'); return; }
+  input.value = '';
+  appendMsg('user', msg);
+  const loading = appendMsg('assistant','…thinking…',true);
+  document.getElementById('aiSend').disabled = true;
+
+  const now = new Date();
+  const monthly = transactions.filter(t=>{const d=new Date(t.date);return d.getMonth()===now.getMonth()&&d.getFullYear()===now.getFullYear();});
+  const income  = monthly.filter(t=>t.type==='income').reduce((s,t)=>s+t.amount,0);
+  const expense = monthly.filter(t=>t.type==='expense').reduce((s,t)=>s+t.amount,0);
+  const catB = {}; monthly.filter(t=>t.type==='expense').forEach(t=>catB[t.cat]=(catB[t.cat]||0)+t.amount);
+  const mpesaCount  = transactions.filter(t=>t.source==='mpesa').length;
+  const airtelCount = transactions.filter(t=>t.source==='airtel').length;
+
+  const context = `You are a concise, friendly financial advisor for a Kenyan user using MoneyMind. This month's data:
+- Income: KES ${fmt(income)}
+- Expenses: KES ${fmt(expense)}
+- Balance: KES ${fmt(income-expense)}
+- Monthly budget: ${budget ? 'KES '+fmt(budget) : 'not set'}
+- Spending by category: ${JSON.stringify(catB)}
+- M-PESA transactions synced: ${mpesaCount}
+- Airtel Money transactions synced: ${airtelCount}
+- Total transactions: ${transactions.length}
+Give practical, Kenya-specific advice. Under 130 words. Be direct and helpful.`;
+
+  aiHistory.push({role:'user',content:msg});
+  try {
+    const res = await fetch('https://api.anthropic.com/v1/messages',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','x-api-key':key,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
+      body:JSON.stringify({model:'claude-sonnet-4-6',max_tokens:300,system:context,messages:aiHistory})
+    });
+    const data = await res.json();
+    const reply = data.content?.[0]?.text || 'No response. Check your API key.';
+    aiHistory.push({role:'assistant',content:reply});
+    loading.textContent = reply;
+    loading.classList.remove('loading');
+  } catch(e) {
+    loading.textContent = 'Connection error. Check API key and internet.';
+    loading.classList.remove('loading');
+  }
+  document.getElementById('aiSend').disabled = false;
+  document.getElementById('aiMessages').scrollTop = 99999;
+}
+
+function appendMsg(role,text,load=false) {
+  const box = document.getElementById('aiMessages');
+  const div = document.createElement('div');
+  div.className='msg '+role+(load?' loading':'');
+  div.textContent=text; box.appendChild(div);
+  box.scrollTop=99999; return div;
+}
+
+// ════════════════════════════════════════
+//  SETTINGS
+// ════════════════════════════════════════
+function saveApiKey() {
+  const k = document.getElementById('apiKeyInput').value.trim();
+  if (!k.startsWith('sk-')) { showToast('Invalid key format','error'); return; }
+  localStorage.setItem('mm_apikey',k); apiKey=k;
+  showToast('API key saved ✓','success');
+}
+
+function saveBudget() {
+  const b = parseFloat(document.getElementById('budgetInput').value);
+  if (!b||b<=0) { showToast('Enter a valid budget','error'); return; }
+  budget=b; localStorage.setItem('mm_budget',b); updateAll();
+  showToast('Budget set: KES '+fmt(b),'success');
+}
+
+function exportData() {
+  const blob = new Blob([JSON.stringify({transactions,budget,provider:activeProvider,lastSync},null,2)],{type:'application/json'});
+  const a = document.createElement('a'); a.href=URL.createObjectURL(blob);
+  a.download='moneymind-export.json'; a.click();
+}
+
+function clearData() {
+  if (!confirm('Delete ALL data including imported SMS transactions? This cannot be undone.')) return;
+  transactions=[]; importedIds=new Set();
+  localStorage.removeItem('mm_txs'); localStorage.removeItem('mm_importedIds');
+  localStorage.removeItem('mm_lastsync'); lastSync=null;
+  save(); updateAll(); updateSyncBanner();
+  showToast('All data cleared','');
+}
+
+// ════════════════════════════════════════
+//  UTILS
+// ════════════════════════════════════════
+function fmt(n) { return Math.round(n).toLocaleString('en-KE'); }
+function fmtDate(d) { return new Date(d).toLocaleDateString('en-KE',{month:'short',day:'numeric'}); }
+function esc(s) { return s.replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+function showToast(msg,type='') {
+  const t=document.getElementById('toast');
+  t.textContent=msg; t.className='toast show '+(type||'');
+  setTimeout(()=>t.className='toast',2500);
+}
+</script>
+</body>
+</html>
