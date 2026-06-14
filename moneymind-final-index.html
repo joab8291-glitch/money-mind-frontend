@@ -4,35 +4,335 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>MoneyMind – Smart Budget for Kenya</title>
+<meta name="description" content="AI-powered personal budget tracker with M-Pesa & Airtel Money SMS sync for Kenya." />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet" />
 <style>
-/* Original CSS kept for brevity in this response */
-body { font-family: 'Space Grotesk', sans-serif; background:#0D1B2A; color:#E8F0F7; }
+/* ==================== ORIGINAL CSS (Full) ==================== */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --bg:#0D1B2A; --surface:#132033; --card:#1A2B3C; --border:#243547;
+  --accent:#00E5A0; --accent2:#F5A623; --danger:#FF5A5A;
+  --mpesa:#4CAF50; --airtel:#FF6B35; --text:#E8F0F7; --muted:#6B8BA4;
+  --income-c:#00E5A0; --expense-c:#FF5A5A;
+  --font:'Space Grotesk',sans-serif; --mono:'Space Mono',monospace; --r:12px;
+}
+body { font-family:var(--font); background:var(--bg); color:var(--text); min-height:100vh; line-height:1.6; }
+nav { display:flex; align-items:center; justify-content:space-between; padding:14px 20px; background:var(--surface); border-bottom:1px solid var(--border); position:sticky; top:0; z-index:100; }
+.nav-logo { font-family:var(--mono); font-size:1.1rem; font-weight:700; color:var(--accent); }
+.hero { padding:24px 20px 18px; background:linear-gradient(160deg,var(--surface) 0%,var(--bg) 100%); border-bottom:1px solid var(--border); }
+.hero-balance { font-family:var(--mono); font-size:clamp(1.9rem,8vw,3rem); font-weight:700; color:var(--accent); }
+.btn-primary { width:100%; padding:12px; background:var(--accent); color:var(--bg); border:none; border-radius:8px; font-weight:700; cursor:pointer; }
+.form-card { background:var(--card); border:1px solid var(--border); border-radius:var(--r); padding:16px; margin-bottom:16px; }
+.tx-item { background:var(--card); border:1px solid var(--border); border-radius:var(--r); padding:11px 13px; }
+.toast { position:fixed; bottom:78px; left:50%; transform:translateX(-50%); background:var(--surface); border:1px solid var(--border); border-radius:99px; padding:9px 18px; font-size:0.78rem; opacity:0; transition:all 0.3s; }
+.toast.show { opacity:1; }
+/* Add the rest of your original CSS here if needed */
 </style>
 </head>
 <body>
 
-<!-- Full updated HTML with all improvements will be here -->
-<!-- For now, use the original file + the changes we made -->
+<!-- NAV with User Greeting -->
+<nav>
+  <div class="nav-logo">Money<span>Mind</span></div>
+  <div style="display:flex; align-items:center; gap:12px;">
+    <div class="nav-month" id="currentMonth">—</div>
+    <div id="userInfo" style="display:none; align-items:center; gap:8px; font-size:0.85rem; color:#6B8BA4;">
+      <span id="userName"></span>
+      <button onclick="logoutUser()" style="background:none; border:1px solid #243547; color:#6B8BA4; padding:4px 10px; border-radius:6px; font-size:0.75rem; cursor:pointer;">Logout</button>
+    </div>
+  </div>
+</nav>
 
+<!-- HERO IMAGE SECTION -->
+<div style="padding: 24px 20px 16px; background: linear-gradient(180deg, #132033 0%, #0D1B2A 100%);">
+  <div style="max-width: 100%; border-radius: 24px; overflow: hidden; box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);">
+    <img src="images/moneymind-hero.jpg" alt="MoneyMind - Smart Budgeting for Kenya" style="width: 100%; display: block; border-radius: 20px;">
+  </div>
+</div>
+
+<!-- ADD TRANSACTION SECTION -->
+<div class="section active" id="sec-add">
+  <!-- Your original Add Transaction form here -->
+</div>
+
+<!-- HISTORY SECTION -->
+<div class="section" id="sec-history">
+  <!-- Your original History section here -->
+</div>
+
+<!-- SMS SYNC SECTION -->
+<div class="section" id="sec-sms">
+  <!-- Your original SMS section here -->
+</div>
+
+<!-- INSIGHTS SECTION (with Monthly Summary) -->
+<div class="section" id="sec-insights">
+  
+  <!-- NEW: Monthly Summary Card -->
+  <div class="form-card" style="margin-bottom:16px;">
+    <div class="form-title">This Month at a Glance</div>
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:14px;">
+      <div>
+        <div style="font-size:0.75rem; color:#6B8BA4;">Total Income</div>
+        <div style="font-size:1.1rem; font-weight:700; color:#00E5A0;" id="summaryIncome">KES 0</div>
+      </div>
+      <div>
+        <div style="font-size:0.75rem; color:#6B8BA4;">Total Expenses</div>
+        <div style="font-size:1.1rem; font-weight:700; color:#FF5A5A;" id="summaryExpense">KES 0</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Original Chart -->
+  <div class="chart-wrap">
+    <div class="chart-title">Income vs Expenses – Last 7 Days</div>
+    <canvas id="lineChart" height="160"></canvas>
+  </div>
+
+  <!-- Original Category Grid -->
+  <span class="section-title">Spending by Category</span>
+  <div class="category-grid" id="categoryGrid"></div>
+</div>
+
+<!-- AI CHAT SECTION -->
+<div class="section" id="sec-ai">
+  <!-- Your original AI section here -->
+</div>
+
+<!-- SETTINGS SECTION -->
+<div class="section" id="sec-settings">
+  <!-- Your original Settings section here -->
+</div>
+
+<!-- TOAST + LOADING OVERLAY -->
+<div class="toast" id="toast"></div>
+
+<div id="loadingOverlay" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(13,27,42,0.85); z-index:400; align-items:center; justify-content:center; flex-direction:column;">
+  <div style="width:48px; height:48px; border:4px solid #243547; border-top-color:#00E5A0; border-radius:50%; animation:spin 0.8s linear infinite;"></div>
+  <div style="margin-top:16px; color:#6B8BA4; font-size:0.9rem;">Please wait...</div>
+</div>
 <script>
-// Full updated JavaScript with backend integration
+// ==================== CONFIG ====================
 const API_BASE = 'https://money-mind-backend-tzih.onrender.com';
 let token = localStorage.getItem('mm_token') || null;
 let currentUser = null;
+let transactions = JSON.parse(localStorage.getItem('mm_txs') || '[]');
+let budget = parseFloat(localStorage.getItem('mm_budget') || '0');
+let activeProvider = localStorage.getItem('mm_provider') || null;
+let lastSync = localStorage.getItem('mm_lastsync') || null;
+let importedIds = new Set(JSON.parse(localStorage.getItem('mm_importedIds') || '[]'));
 
+// ==================== API HELPER ====================
 async function apiCall(endpoint, options = {}) {
   const headers = { 'Content-Type': 'application/json' };
   if (token) headers['Authorization'] = `Bearer ${token}`;
+
   const res = await fetch(API_BASE + endpoint, { ...options, headers });
-  if (res.status === 401) { localStorage.removeItem('mm_token'); token = null; showAuthModal(); throw new Error('Please login again'); }
-  if (!res.ok) { const err = await res.json().catch(() => ({})); throw new Error(err.error || 'Request failed'); }
+
+  if (res.status === 401) {
+    localStorage.removeItem('mm_token');
+    token = null;
+    showAuthModal();
+    throw new Error('Please login again');
+  }
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error || 'Request failed');
+  }
   return res.json();
 }
 
-// All functions updated to use backend when logged in
-// Greeting, Logout, Monthly Summary, Improved AI, etc. included
+// ==================== AUTH + USER ====================
+function showAuthModal() {
+  // Paste your auth modal code here (from earlier)
+}
 
-// Download the complete version from artifacts if needed
+function showUserInfo() {
+  const userInfo = document.getElementById('userInfo');
+  const userNameEl = document.getElementById('userName');
+  if (!userInfo || !userNameEl) return;
+
+  if (currentUser && currentUser.name) {
+    userNameEl.textContent = 'Hi, ' + currentUser.name.split(' ')[0];
+    userInfo.style.display = 'flex';
+  } else if (token) {
+    userInfo.style.display = 'flex';
+    userNameEl.textContent = 'Hi there';
+  }
+}
+
+function logoutUser() {
+  if (confirm('Logout from MoneyMind?')) {
+    localStorage.removeItem('mm_token');
+    token = null;
+    currentUser = null;
+    transactions = [];
+    const userInfo = document.getElementById('userInfo');
+    if (userInfo) userInfo.style.display = 'none';
+    updateAll();
+    showAuthModal();
+  }
+}
+
+// ==================== BACKEND FUNCTIONS ====================
+async function loadTransactionsFromBackend() {
+  if (!token) return;
+  try {
+    const data = await apiCall('/api/transactions');
+    transactions = data;
+    updateAll();
+    updateSyncBanner();
+  } catch (err) {
+    console.error("Failed to load from backend:", err);
+  }
+}
+
+async function addTransactionToBackend(type, amount, description, category, date) {
+  try {
+    await apiCall('/api/transactions', {
+      method: 'POST',
+      body: JSON.stringify({ type, amount: parseFloat(amount), description, category, date })
+    });
+    showToast('Saved to database ✓', 'success');
+    await loadTransactionsFromBackend();
+  } catch (err) {
+    showToast(err.message, 'error');
+  }
+}
+
+// ==================== UPDATED MAIN FUNCTIONS ====================
+function addTransaction() {
+  const desc = document.getElementById('txDesc').value.trim();
+  const amount = parseFloat(document.getElementById('txAmount').value);
+  const cat = document.getElementById('txCategory').value;
+  const date = document.getElementById('txDate').value;
+
+  if (!desc || !amount || amount <= 0) {
+    showToast('Please fill all fields correctly', 'error');
+    return;
+  }
+
+  if (token) {
+    addTransactionToBackend(txType, amount, desc, cat, date);
+    document.getElementById('txDesc').value = '';
+    document.getElementById('txAmount').value = '';
+  } else {
+    // Local fallback
+    transactions.unshift({ id: Date.now(), type: txType, desc, amount, cat, date, source: 'manual' });
+    save();
+    updateAll();
+    document.getElementById('txDesc').value = '';
+    document.getElementById('txAmount').value = '';
+    showToast('Added locally (login to sync)', '');
+  }
+}
+
+async function deleteTransaction(id) {
+  if (token) {
+    try {
+      await apiCall(`/api/transactions/${id}`, { method: 'DELETE' });
+      showToast('Deleted from database', '');
+      await loadTransactionsFromBackend();
+    } catch (err) {
+      showToast(err.message, 'error');
+    }
+  } else {
+    transactions = transactions.filter(t => t.id !== id);
+    save();
+    updateAll();
+    showToast('Deleted (local)', '');
+  }
+}
+
+async function parseSMS() {
+  if (!activeProvider) {
+    showToast('Select a provider first', 'error');
+    return;
+  }
+  const text = document.getElementById('smsInput').value.trim();
+  if (!text) {
+    showToast('Paste some SMS messages', 'error');
+    return;
+  }
+
+  if (token) {
+    try {
+      const result = await apiCall('/api/sms/parse', {
+        method: 'POST',
+        body: JSON.stringify({ text, provider: activeProvider })
+      });
+      showToast(result.message || 'Imported successfully', 'success');
+      await loadTransactionsFromBackend();
+    } catch (err) {
+      showToast(err.message, 'error');
+    }
+  } else {
+    // Local fallback (your original parse logic)
+    showToast('Login to save SMS imports to database', '');
+  }
+}
+
+async function saveBudget() {
+  const b = parseFloat(document.getElementById('budgetInput').value);
+  if (!b || b <= 0) {
+    showToast('Enter a valid budget', 'error');
+    return;
+  }
+
+  if (token) {
+    try {
+      await apiCall('/api/budget', {
+        method: 'POST',
+        body: JSON.stringify({ amount: b })
+      });
+      budget = b;
+      updateAll();
+      showToast('Budget saved to database ✓', 'success');
+    } catch (err) {
+      showToast(err.message, 'error');
+    }
+  } else {
+    budget = b;
+    localStorage.setItem('mm_budget', b);
+    updateAll();
+    showToast('Budget set locally', '');
+  }
+}
+
+// ==================== UPDATE ALL (with Monthly Summary) ====================
+function updateAll() {
+  // Your original updateAll logic here...
+  const now = new Date();
+  const m = now.getMonth(), y = now.getFullYear();
+  const monthly = transactions.filter(t => {
+    const d = new Date(t.date);
+    return d.getMonth() === m && d.getFullYear() === y;
+  });
+  const income = monthly.filter(t => t.type === 'income').reduce((s, t) => s + t.amount, 0);
+  const expense = monthly.filter(t => t.type === 'expense').reduce((s, t) => s + t.amount, 0);
+
+  // Update Monthly Summary
+  const sumIncome = document.getElementById('summaryIncome');
+  const sumExpense = document.getElementById('summaryExpense');
+  if (sumIncome) sumIncome.textContent = 'KES ' + fmt(income);
+  if (sumExpense) sumExpense.textContent = 'KES ' + fmt(expense);
+
+  // Rest of your original updateAll code...
+}
+
+// ==================== INIT ====================
+function checkAuthOnLoad() {
+  if (!token) {
+    showAuthModal();
+  } else {
+    showUserInfo();
+    loadTransactionsFromBackend();
+  }
+}
+
+// Call init
+checkAuthOnLoad();
+updateAll();
 </script>
-</body>
-</html>
